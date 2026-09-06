@@ -37,3 +37,6 @@ coverage/
 
 # Artefactos generados del canvas de diseño (regenerables con la skill de diseño)
 design/lista-de-mercado.html
+
+.vercel
+.env*
