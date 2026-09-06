@@ -75,5 +75,9 @@ export default defineConfig({
 		environment: "jsdom",
 		setupFiles: ["./src/test/setup.ts"],
 		globals: true,
+		// Las pruebas de integración de supabase/tests hablan directo con Postgres (ver
+		// vitest.integration.config.ts) y corren aparte con `pnpm test:integration`: necesitan
+		// `supabase start` arriba, y no tiene sentido bloquear `pnpm test` con eso.
+		exclude: ["**/node_modules/**", "**/dist/**", "supabase/tests/**"],
 	},
 });
