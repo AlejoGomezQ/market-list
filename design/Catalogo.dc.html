@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+  <style>
+    :root{
+      --paper:#FFFFFF; --ink:#000000; --mute:#6B6F72; --ghost:#A9AEB1; --rule:#E3E5E6;
+      --supermu:#1B4FD8; --d1:#B3261E;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;
+      -webkit-font-smoothing:antialiased}
+    .sign{font-variation-settings:"wdth" 75;font-weight:700;text-transform:uppercase;letter-spacing:-0.01em}
+    .num{font-variation-settings:"wdth" 75;font-weight:700;font-variant-numeric:tabular-nums}
+    a{color:#000000}
+    a:hover{color:#6B6F72}
+  </style>
+</helmet>
+<div style="width:390px;height:844px;display:flex;flex-direction:column;background:var(--paper);overflow:hidden;position:relative">
+
+  <header style="display:flex;align-items:center;justify-content:space-between;padding:22px 20px 12px">
+    <div style="font-size:26px;font-weight:600;letter-spacing:-0.02em">Catálogo</div>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" y1="4" x2="14" y2="4"></line><line x1="10" y1="4" x2="3" y2="4"></line><line x1="21" y1="12" x2="12" y2="12"></line><line x1="8" y1="12" x2="3" y2="12"></line><line x1="21" y1="20" x2="16" y2="20"></line><line x1="12" y1="20" x2="3" y2="20"></line><line x1="14" y1="2" x2="14" y2="6"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="16" y1="18" x2="16" y2="22"></line></svg>
+  </header>
+
+  <div style="padding:0 20px 14px">
+    <div style="display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:4px;color:var(--mute)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <span style="font-size:16px">Buscar producto</span>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;height:44px;padding:0 20px;background:var(--supermu);color:#FFFFFF">
+    <span class="sign" style="font-size:19px">Supermu</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;height:54px;padding:0 20px">
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Leche</span>
+    <span style="font-size:14px;color:var(--mute)">Alpina</span>
+    <div style="display:flex;align-items:center;gap:12px;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:999px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <span class="num" style="font-size:16px;min-width:9px;text-align:center">2</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;height:54px;padding:0 20px">
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Huevos</span>
+    <div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--rule);border-radius:999px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;height:54px;padding:0 20px">
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Pan de molde</span>
+    <div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--rule);border-radius:999px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;height:54px;padding:0 20px">
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Queso</span>
+    <div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--rule);border-radius:999px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;height:54px;padding:0 20px">
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Mantequilla</span>
+    <div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--rule);border-radius:999px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;height:44px;padding:0 20px;background:var(--d1);color:#FFFFFF">
+    <span class="sign" style="font-size:19px">D1</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;height:54px;padding:0 20px">
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Arroz</span>
+    <div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--rule);border-radius:999px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;height:54px;padding:0 20px">
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Papel higiénico</span>
+    <div style="display:flex;align-items:center;gap:12px;height:34px;padding:0 12px;border:1px solid var(--rule);border-radius:999px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <span class="num" style="font-size:16px;min-width:9px;text-align:center">2</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;height:44px;padding:0 20px;background:var(--rule);color:var(--mute)">
+    <span class="sign" style="font-size:19px">Sin asignar</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;height:54px;padding:0 20px">
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Pilas AA</span>
+    <div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--rule);border-radius:999px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+  </div>
+
+  <div style="position:absolute;right:20px;bottom:104px;width:56px;height:56px;border-radius:999px;background:var(--ink);display:flex;align-items:center;justify-content:center">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+  </div>
+
+  <nav style="margin-top:auto;display:flex;border-top:1px solid var(--rule);padding-bottom:20px;background:var(--paper)">
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:11px;color:var(--mute)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+      <span style="font-size:12px;font-weight:500">Mercado</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:11px;color:var(--ink)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      <span style="font-size:12px;font-weight:600">Catálogo</span>
+    </div>
+  </nav>
+
+</div>
+</x-dc>
+</body>
+</html>

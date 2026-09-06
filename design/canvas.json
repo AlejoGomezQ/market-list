@@ -1,0 +1,14 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 390, "h": 844, "title": "Mercado" },
+    { "file": "MercadoOscuro.dc.html", "x": 470, "y": 0, "w": 390, "h": 844, "title": "Mercado · oscuro y sin conexión" },
+    { "file": "Catalogo.dc.html", "x": 940, "y": 0, "w": 390, "h": 844, "title": "Catálogo" },
+    { "file": "FinalizarCompra.dc.html", "x": 0, "y": 1010, "w": 390, "h": 844, "title": "Confirmar finalizar compra" },
+    { "file": "NuevoProducto.dc.html", "x": 470, "y": 1010, "w": 390, "h": 844, "title": "Nuevo producto" }
+  ],
+  "annotations": [
+    { "id": "nota-color", "x": 940, "y": 1010, "w": 300, "text": "El color pertenece solo a los supermercados.\n\nSupermu cobalto, D1 rojo, Sin asignar gris. Todo lo demás es negro real sobre blanco, para que el único color saturado de la pantalla signifique algo: en qué sección estás, sin leer.\n\nLas bandas van a sangre y se quedan pegadas arriba al desplazar, como el cartel colgado del pasillo." },
+    { "id": "nota-cantidad", "x": 940, "y": 1330, "w": 300, "text": "La cantidad se comporta distinto en cada pantalla.\n\nEn Mercado es una cifra, y solo cuando es mayor que 1: tocar la fila significa marcar, así que un contador ahí sería un objetivo de toque parásito.\n\nEn Catálogo sí vive el contador completo, porque es donde se arma la lista." }
+  ],
+  "launch": { "view": "canvas" }
+}

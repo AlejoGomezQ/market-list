@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+  <style>
+    :root{
+      --paper:#FFFFFF; --ink:#000000; --mute:#6B6F72; --ghost:#A9AEB1; --rule:#E3E5E6;
+      --supermu:#1B4FD8;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;
+      -webkit-font-smoothing:antialiased}
+    .sign{font-variation-settings:"wdth" 75;font-weight:700;text-transform:uppercase;letter-spacing:-0.01em}
+    .num{font-variation-settings:"wdth" 75;font-weight:700;font-variant-numeric:tabular-nums}
+    a{color:#000000}
+    a:hover{color:#6B6F72}
+  </style>
+</helmet>
+<div style="width:390px;height:844px;background:var(--paper);overflow:hidden;position:relative">
+
+  <div style="display:flex;flex-direction:column;height:100%">
+    <header style="display:flex;align-items:center;justify-content:space-between;padding:22px 20px 14px">
+      <div style="font-size:26px;font-weight:600;letter-spacing:-0.02em">Mercado</div>
+      <div style="display:flex;align-items:center;gap:7px;color:var(--mute);font-size:13px">
+        <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor"></circle></svg>
+        <span>Al día</span>
+      </div>
+    </header>
+    <div style="display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 20px;background:var(--supermu);color:#FFFFFF">
+      <span class="sign" style="font-size:19px">Supermu</span>
+      <span class="num" style="font-size:14px;opacity:.85">3 de 6</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 20px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect></svg>
+      <span style="flex-grow:1;font-size:17px;font-weight:500">Leche</span>
+      <span class="num" style="font-size:17px">2</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 20px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect></svg>
+      <span style="flex-grow:1;font-size:17px;font-weight:500">Huevos</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 20px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect></svg>
+      <span style="flex-grow:1;font-size:17px;font-weight:500">Pan de molde</span>
+    </div>
+  </div>
+
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+
+  <div style="position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:4px 4px 0 0;padding:26px 20px 30px">
+    <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin-bottom:22px">Finalizar compra en Supermu</div>
+
+    <div style="display:flex;align-items:baseline;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--rule)">
+      <span style="font-size:16px">Saldrán de la lista</span>
+      <span class="num" style="font-size:20px">3 productos</span>
+    </div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;padding-top:14px;padding-bottom:14px;border-bottom:1px solid var(--rule)">
+      <span style="font-size:16px">Se quedan sin comprar</span>
+      <span class="num" style="font-size:20px">3 productos</span>
+    </div>
+
+    <div style="font-size:14px;color:var(--mute);padding:16px 0 24px;max-width:34ch">Los productos siguen en tu catálogo.</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;justify-content:center;height:50px;border-radius:4px;background:var(--ink);color:#FFFFFF;font-size:16px;font-weight:600">Finalizar</div>
+      <div style="display:flex;align-items:center;justify-content:center;height:50px;border-radius:4px;color:var(--mute);font-size:16px;font-weight:600">Cancelar</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

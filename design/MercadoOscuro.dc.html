@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+  <style>
+    :root{
+      --paper:#17191A; --ink:#F2F3F3; --mute:#9AA0A3; --ghost:#63696C; --rule:#2C3033;
+      --supermu:#1B4FD8; --d1:#B3261E; --alert:#B45309;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;
+      -webkit-font-smoothing:antialiased}
+    .sign{font-variation-settings:"wdth" 75;font-weight:700;text-transform:uppercase;letter-spacing:-0.01em}
+    .num{font-variation-settings:"wdth" 75;font-weight:700;font-variant-numeric:tabular-nums}
+    a{color:#F2F3F3}
+    a:hover{color:#9AA0A3}
+  </style>
+</helmet>
+<div style="width:390px;height:844px;display:flex;flex-direction:column;background:var(--paper);overflow:hidden">
+
+  <header style="display:flex;align-items:center;justify-content:space-between;padding:22px 20px 14px">
+    <div style="font-size:26px;font-weight:600;letter-spacing:-0.02em">Mercado</div>
+    <div style="display:flex;align-items:center;gap:7px;color:#E8A33D;font-size:13px;font-weight:500">
+      <svg width="11" height="10" viewBox="0 0 12 11" fill="currentColor" aria-hidden="true"><path d="M6 0 12 11H0z"></path></svg>
+      <span>Sin conexión · 3 pendientes</span>
+    </div>
+  </header>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 20px;background:var(--supermu);color:#FFFFFF">
+    <span class="sign" style="font-size:19px">Supermu</span>
+    <span style="display:flex;align-items:center;gap:10px">
+      <span class="num" style="font-size:14px;opacity:.85">3 de 6</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 20px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect></svg>
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Leche</span>
+    <span class="num" style="font-size:17px">2</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 20px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect></svg>
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Huevos</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 20px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect></svg>
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Pan de molde</span>
+  </div>
+
+  <div style="height:1px;background:var(--rule);margin:8px 20px"></div>
+
+  <div style="display:flex;align-items:center;gap:14px;height:50px;padding:0 20px;color:var(--ghost)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="var(--ghost)"></rect><polyline points="7.5 12.2 10.6 15.3 16.5 9.2" fill="none" stroke="#17191A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+    <span style="flex-grow:1;font-size:17px;font-weight:500;text-decoration:line-through">Queso</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;height:50px;padding:0 20px;color:var(--ghost)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="var(--ghost)"></rect><polyline points="7.5 12.2 10.6 15.3 16.5 9.2" fill="none" stroke="#17191A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+    <span style="flex-grow:1;font-size:17px;font-weight:500;text-decoration:line-through">Yogur</span>
+  </div>
+
+  <div style="padding:12px 20px 18px">
+    <div style="display:flex;align-items:center;justify-content:center;height:46px;border-radius:4px;background:var(--ink);color:#17191A;font-size:16px;font-weight:600">Finalizar compra · 3</div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 20px;background:var(--d1);color:#FFFFFF">
+    <span class="sign" style="font-size:19px">D1</span>
+    <span style="display:flex;align-items:center;gap:10px">
+      <span class="num" style="font-size:14px;opacity:.85">0 de 2</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 20px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect></svg>
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Arroz</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 20px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect></svg>
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Papel higiénico</span>
+    <span class="num" style="font-size:17px">2</span>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 20px;background:var(--rule);color:var(--mute)">
+    <span class="sign" style="font-size:19px">Sin asignar</span>
+    <span class="num" style="font-size:14px">0 de 1</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:14px;height:54px;padding:0 20px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"></rect></svg>
+    <span style="flex-grow:1;font-size:17px;font-weight:500">Pilas AA</span>
+  </div>
+
+  <nav style="margin-top:auto;display:flex;border-top:1px solid var(--rule);padding-bottom:20px">
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:11px;color:var(--ink)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+      <span style="font-size:12px;font-weight:600">Mercado</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:11px;color:var(--mute)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      <span style="font-size:12px;font-weight:500">Catálogo</span>
+    </div>
+  </nav>
+
+</div>
+</x-dc>
+</body>
+</html>

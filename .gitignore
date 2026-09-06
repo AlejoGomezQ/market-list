@@ -1,0 +1,39 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+build/
+*.local
+
+# Variables de entorno (excepto la plantilla de ejemplo)
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Cobertura de tests
+coverage/
+
+# Cache de herramientas
+.eslintcache
+*.tsbuildinfo
+.vite/
+
+# Artefactos generados del canvas de diseño (regenerables con la skill de diseño)
+design/lista-de-mercado.html

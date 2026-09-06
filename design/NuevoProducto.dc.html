@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+  <style>
+    :root{
+      --paper:#FFFFFF; --ink:#000000; --mute:#6B6F72; --ghost:#A9AEB1; --rule:#E3E5E6;
+      --supermu:#1B4FD8;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;
+      -webkit-font-smoothing:antialiased}
+    .sign{font-variation-settings:"wdth" 75;font-weight:700;text-transform:uppercase;letter-spacing:-0.01em}
+    a{color:#000000}
+    a:hover{color:#6B6F72}
+  </style>
+</helmet>
+<div style="width:390px;height:844px;background:var(--paper);overflow:hidden;position:relative">
+
+  <div style="display:flex;flex-direction:column;height:100%">
+    <header style="display:flex;align-items:center;justify-content:space-between;padding:22px 20px 12px">
+      <div style="font-size:26px;font-weight:600;letter-spacing:-0.02em">Catálogo</div>
+    </header>
+    <div style="padding:0 20px 14px">
+      <div style="display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:4px;color:var(--mute)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <span style="font-size:16px">Buscar producto</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;height:44px;padding:0 20px;background:var(--supermu);color:#FFFFFF">
+      <span class="sign" style="font-size:19px">Supermu</span>
+    </div>
+    <div style="display:flex;align-items:center;height:54px;padding:0 20px">
+      <span style="font-size:17px;font-weight:500">Leche</span>
+    </div>
+  </div>
+
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+
+  <div style="position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:4px 4px 0 0;padding:24px 20px 30px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:26px">
+      <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em">Nuevo producto</div>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </div>
+
+    <div style="font-size:13px;color:var(--mute);margin-bottom:8px">Nombre</div>
+    <div style="display:flex;align-items:center;height:50px;padding:0 14px;border:1px solid var(--ink);border-radius:4px;font-size:17px;font-weight:500">
+      <span>Leche</span>
+      <span style="width:1.5px;height:22px;background:var(--ink);margin-left:2px"></span>
+    </div>
+    <div style="font-size:13px;color:var(--mute);padding:8px 2px 0">Ya tienes <span style="color:var(--ink);font-weight:600">Leche</span> en Supermu. ¿Es otro producto?</div>
+
+    <div style="font-size:13px;color:var(--mute);margin:22px 0 8px">Supermercado</div>
+    <div style="display:flex;gap:8px">
+      <div style="display:flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border-radius:4px;background:var(--supermu);color:#FFFFFF;font-size:16px;font-weight:600">Supermu</div>
+      <div style="display:flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border-radius:4px;border:1px solid var(--rule);font-size:16px;font-weight:500">D1</div>
+      <div style="display:flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border-radius:4px;border:1px solid var(--rule);color:var(--mute);font-size:16px;font-weight:500">Ninguno</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;height:52px;margin-top:18px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <span style="font-size:16px;font-weight:500">Marca y categoría</span>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:22px">
+      <div style="flex-grow:1;display:flex;align-items:center;justify-content:center;height:50px;border-radius:4px;background:var(--ink);color:#FFFFFF;font-size:16px;font-weight:600">Guardar</div>
+      <div style="flex-grow:1;display:flex;align-items:center;justify-content:center;height:50px;border-radius:4px;border:1px solid var(--rule);font-size:16px;font-weight:600">Guardar y otro</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
