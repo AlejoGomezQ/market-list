@@ -3,10 +3,69 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 
 // https://vite.dev/config/
 export default defineConfig({
-	plugins: [react(), tailwindcss()],
+	plugins: [
+		react(),
+		tailwindcss(),
+		VitePWA({
+			// 'prompt', no 'autoUpdate' (CLAUDE.md, "Reglas no negociables del
+			// local-first" y docs/plan_implementacion_v0.1.md Fase 0): con
+			// autoUpdate habría recargas por sorpresa a mitad de una alta larga
+			// de productos (Fase 4) o con la cola de sincronización llena
+			// (Fase 6). El aviso de actualización visible es Fase 7; por ahora
+			// basta con que el hook exista (ver src/main.tsx).
+			registerType: "prompt",
+			manifest: {
+				name: "Lista de Mercado",
+				short_name: "Mercado",
+				description:
+					"Lista de mercado compartida del hogar, con catálogo permanente de productos.",
+				lang: "es",
+				display: "standalone",
+				// Negro real, no un negro teñido (docs/identidad_visual_v0.1.md #2).
+				theme_color: "#000000",
+				background_color: "#000000",
+				icons: [
+					{
+						src: "pwa-192x192.png",
+						sizes: "192x192",
+						type: "image/png",
+					},
+					{
+						src: "pwa-512x512.png",
+						sizes: "512x512",
+						type: "image/png",
+					},
+					{
+						src: "maskable-icon-512x512.png",
+						sizes: "512x512",
+						type: "image/png",
+						purpose: "maskable",
+					},
+				],
+			},
+			workbox: {
+				// Defensivo e intencional, no redundante: por defecto Workbox solo
+				// precachea el armazón del build (JS/CSS/HTML/iconos), lo cual ya
+				// cumple la regla 7 de CLAUDE.md ("el service worker cachea el
+				// armazón, nunca las llamadas a Supabase"). Esta regla deja esa
+				// garantía escrita en código en vez de depender solo de que
+				// Workbox "no lo cachee por omisión": cualquier request a
+				// Supabase (Realtime, PostgREST, Auth) va siempre a red, nunca a
+				// caché, porque dos cachés con invalidaciones distintas terminan
+				// mostrando datos más viejos que los de IndexedDB.
+				runtimeCaching: [
+					{
+						urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+						handler: "NetworkOnly",
+					},
+				],
+			},
+		}),
+	],
 	resolve: {
 		alias: {
 			"@": path.resolve(import.meta.dirname, "./src"),

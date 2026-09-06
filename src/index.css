@@ -154,18 +154,34 @@
 	font-variation-settings: "wdth" 100;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Safe area inferior (viewport-fit=cover en index.html). Se declara aquí */
+/* para que quede disponible desde ya; el consumidor es la barra de       */
+/* navegación inferior de dos pestañas (D-033), que no existe todavía     */
+/* (llega en Fase 2b/3/4). Uso: className="pb-safe" en esa barra, o       */
+/* var(--safe-area-bottom) directo si hace falta sumarla a otro padding.  */
+/* ---------------------------------------------------------------------- */
+:root {
+	--safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility pb-safe {
+	padding-bottom: var(--safe-area-bottom);
+}
+
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
+	}
+
+	html {
+		overscroll-behavior: none;
+		@apply font-sans;
 	}
 
 	body {
 		margin: 0;
 		overscroll-behavior: none;
 		@apply bg-background text-foreground;
-	}
-
-	html {
-		@apply font-sans;
 	}
 }
