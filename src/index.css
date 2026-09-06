@@ -1,111 +1,171 @@
+@import "tailwindcss";
+@import "shadcn/tailwind.css";
+
+/* ---------------------------------------------------------------------- */
+/* Tipografía: Archivo variable, autoalojada (docs/identidad_visual_v0.1.md #3). */
+/* No se usa <link> a Google Fonts: la app debe cargar sin red (Fase 0).   */
+/* Ejes disponibles en el archivo: wght 100–900, wdth 62–125.              */
+/* ---------------------------------------------------------------------- */
+@font-face {
+	font-family: "Archivo Variable";
+	src: url("/fonts/Archivo-Variable.woff2") format("woff2-variations");
+	font-weight: 100 900;
+	font-stretch: 62% 125%;
+	font-style: normal;
+	font-display: swap;
+}
+
 :root {
-	--text: #6b6375;
-	--text-h: #08060d;
-	--bg: #fff;
-	--border: #e5e4e7;
-	--code-bg: #f4f3ec;
-	--accent: #aa3bff;
-	--accent-bg: rgba(170, 59, 255, 0.1);
-	--accent-border: rgba(170, 59, 255, 0.5);
-	--social-bg: rgba(244, 243, 236, 0.5);
-	--shadow:
-		rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+	/* Acromáticos — claro (identidad_visual_v0.1.md #2, tabla base) */
+	--paper: #ffffff;
+	--ink: #000000;
+	--ink-mute: #6b6f72;
+	--ink-ghost: #a9aeb1;
+	--rule: #e3e5e6;
 
-	--sans: system-ui, "Segoe UI", Roboto, sans-serif;
-	--heading: system-ui, "Segoe UI", Roboto, sans-serif;
-	--mono: ui-monospace, Consolas, monospace;
+	/* Supermercados — paleta cerrada de ocho, idéntica en claro y oscuro */
+	--market-rojo: #b3261e;
+	--market-cobalto: #1b4fd8;
+	--market-bosque: #1f6b45;
+	--market-ocre: #8a5a00;
+	--market-ciruela: #6d2c6b;
+	--market-turquesa: #0f5f6b;
+	--market-pizarra: #3a4550;
+	--market-naranja: #a8420f;
 
-	font: 18px / 145% var(--sans);
-	letter-spacing: 0.18px;
+	/* Funcionales — solo estado y flujos destructivos, nunca decoración */
+	--alert: #b45309;
+	--destructive: #a32014;
+
+	/* Retícula: el radio codifica función, no es uniforme (identidad_visual_v0.1.md #4) */
+	--radius-band-raw: 0px;
+	--radius-control: 4px;
+	--radius-pill-raw: 999px;
+
+	/* Tipografía */
+	--font-family-archivo:
+		"Archivo Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+
 	color-scheme: light dark;
-	color: var(--text);
-	background: var(--bg);
-	font-synthesis: none;
-	text-rendering: optimizeLegibility;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
-
-	@media (max-width: 1024px) {
-		font-size: 16px;
-	}
 }
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--text: #9ca3af;
-		--text-h: #f3f4f6;
-		--bg: #16171d;
-		--border: #2e303a;
-		--code-bg: #1f2028;
-		--accent: #c084fc;
-		--accent-bg: rgba(192, 132, 252, 0.15);
-		--accent-border: rgba(192, 132, 252, 0.5);
-		--social-bg: rgba(47, 48, 58, 0.5);
-		--shadow:
-			rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-	}
-
-	#social .button-icon {
-		filter: invert(1) brightness(2);
+		/* Acromáticos — oscuro. Los colores de supermercado y los funcionales no cambian. */
+		--paper: #17191a;
+		--ink: #f2f3f3;
+		--ink-mute: #9aa0a3;
+		--ink-ghost: #63696c;
+		--rule: #2c3033;
 	}
 }
 
-#root {
-	width: 1126px;
-	max-width: 100%;
-	margin: 0 auto;
-	text-align: center;
-	border-inline: 1px solid var(--border);
-	min-height: 100svh;
-	display: flex;
-	flex-direction: column;
-	box-sizing: border-box;
+/* ---------------------------------------------------------------------- */
+/* Tema de Tailwind / shadcn: se remapean sus variables de siempre         */
+/* (background, foreground, primary, …) a los tokens de arriba, en vez de */
+/* dejar la paleta zinc de fábrica y la fuente Geist del preset (D-038).   */
+/* Dark mode sigue prefers-color-scheme, igual que el resto del proyecto: */
+/* no hay selector manual de tema en el alcance del MVP, así que no se usa*/
+/* la variante de clase `.dark` que trae el CLI de shadcn de fábrica.     */
+/* ---------------------------------------------------------------------- */
+@theme inline {
+	--font-sans: var(--font-family-archivo);
+	--font-heading: var(--font-family-archivo);
+
+	/* Base shadcn: sin superficies elevadas, un único fondo (#1 del doc) */
+	--color-background: var(--paper);
+	--color-foreground: var(--ink);
+	--color-card: var(--paper);
+	--color-card-foreground: var(--ink);
+	--color-popover: var(--paper);
+	--color-popover-foreground: var(--ink);
+
+	/* Botón/acción principal: tinta sólida, como en design/FinalizarCompra.dc.html */
+	--color-primary: var(--ink);
+	--color-primary-foreground: var(--paper);
+
+	/* Acción secundaria/terciaria: solo texto, sin caja (sin tarjetas ni sombras) */
+	--color-secondary: var(--paper);
+	--color-secondary-foreground: var(--ink);
+
+	--color-muted: var(--paper);
+	--color-muted-foreground: var(--ink-mute);
+
+	/* Hover/foco de superficies interactivas (menús, filas) */
+	--color-accent: var(--rule);
+	--color-accent-foreground: var(--ink);
+
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--paper);
+
+	--color-border: var(--rule);
+	--color-input: var(--rule);
+	--color-ring: var(--ink);
+
+	/* Paleta de supermercado, disponible como utilidades (bg-market-rojo, …) */
+	--color-market-rojo: var(--market-rojo);
+	--color-market-cobalto: var(--market-cobalto);
+	--color-market-bosque: var(--market-bosque);
+	--color-market-ocre: var(--market-ocre);
+	--color-market-ciruela: var(--market-ciruela);
+	--color-market-turquesa: var(--market-turquesa);
+	--color-market-pizarra: var(--market-pizarra);
+	--color-market-naranja: var(--market-naranja);
+
+	--color-alert: var(--alert);
+
+	/* Radios shadcn (usa --radius internamente): fijado a 4px, el de controles. */
+	/* Las bandas (0) y el contador (999px) se aplican con rounded-band/rounded-pill. */
+	--radius: var(--radius-control);
+	--radius-sm: var(--radius-control);
+	--radius-md: var(--radius-control);
+	--radius-lg: var(--radius-control);
+	--radius-xl: var(--radius-control);
+	--radius-band: var(--radius-band-raw);
+	--radius-pill: var(--radius-pill-raw);
+
+	/* Escala tipográfica: 13/14/17/20/26px, cinco pasos, ni uno más (#3) */
+	--text-13: 13px;
+	--text-14: 14px;
+	--text-17: 17px;
+	--text-20: 20px;
+	--text-26: 26px;
+
+	/* Interlineado de los dos registros que usa el documento */
+	--leading-product: 1.3;
+	--leading-label: 1.15;
+
+	/* Tracking del rótulo de supermercado */
+	--tracking-label: -0.01em;
+
+	/* Área de toque mínima: la fila entera es la zona de toque (regla de interfaz de CLAUDE.md) */
+	--size-tap: 44px;
+	--min-width-tap: 44px;
+	--min-height-tap: 44px;
 }
 
-body {
-	margin: 0;
+/* Ejes de la variable font que Tailwind no cubre con una utilidad propia. */
+/* Coherente con design/*.dc.html, que ya usa font-variation-settings.     */
+@utility wdth-75 {
+	font-variation-settings: "wdth" 75;
 }
 
-h1,
-h2 {
-	font-family: var(--heading);
-	font-weight: 500;
-	color: var(--text-h);
+@utility wdth-100 {
+	font-variation-settings: "wdth" 100;
 }
 
-h1 {
-	font-size: 56px;
-	letter-spacing: -1.68px;
-	margin: 32px 0;
-	@media (max-width: 1024px) {
-		font-size: 36px;
-		margin: 20px 0;
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
 	}
-}
-h2 {
-	font-size: 24px;
-	line-height: 118%;
-	letter-spacing: -0.24px;
-	margin: 0 0 8px;
-	@media (max-width: 1024px) {
-		font-size: 20px;
+
+	body {
+		margin: 0;
+		overscroll-behavior: none;
+		@apply bg-background text-foreground;
 	}
-}
-p {
-	margin: 0;
-}
 
-code,
-.counter {
-	font-family: var(--mono);
-	display: inline-flex;
-	border-radius: 4px;
-	color: var(--text-h);
-}
-
-code {
-	font-size: 15px;
-	line-height: 135%;
-	padding: 4px 8px;
-	background: var(--code-bg);
+	html {
+		@apply font-sans;
+	}
 }
