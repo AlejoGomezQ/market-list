@@ -2,6 +2,7 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { RouterProvider } from "@tanstack/react-router";
 import { UpdateBanner } from "@/components/update-banner";
 import { persistOptions, queryClient } from "@/lib/query-client";
+import { useVisualViewport } from "@/lib/use-visual-viewport";
 import { router } from "@/router";
 
 /**
@@ -13,6 +14,10 @@ import { router } from "@/router";
  * documenta y avisa el caso, `AppShell` lo muestra).
  */
 function App() {
+	// Publica el área visible como --vvh / --vv-offset-top para que los drawers no queden
+	// detrás del teclado de iOS. Aquí, en la raíz, cubre también los drawers de onboarding.
+	useVisualViewport();
+
 	return (
 		<PersistQueryClientProvider
 			client={queryClient}

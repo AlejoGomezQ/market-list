@@ -49,4 +49,17 @@ test("con 'Marca y categoría' expandido, 'Guardar' sigue dentro del viewport si
 	// El cuerpo scrolleable es una franja propia entre cabecera y pie, no la raíz del drawer
 	// (que vaul bloquea con `touch-action: none`).
 	await expect(drawer.locator('[data-slot="drawer-body"]')).toBeVisible();
+
+	// Playwright no simula el teclado de iOS, pero sí podemos comprobar el cableado: con el
+	// teclado abierto iOS deja --vvh por debajo de la altura de layout. Forzamos ese valor y
+	// el drawer debe acotarse a él en vez de seguir midiendo 80vh.
+	await page.evaluate(
+		"document.documentElement.style.setProperty('--vvh', '300px')",
+	);
+	await expect
+		.poll(
+			async () =>
+				(await drawer.boundingBox())?.height ?? Number.POSITIVE_INFINITY,
+		)
+		.toBeLessThanOrEqual(300);
 });
