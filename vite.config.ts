@@ -15,8 +15,8 @@ export default defineConfig({
 			// local-first" y docs/plan_implementacion_v0.1.md Fase 0): con
 			// autoUpdate habría recargas por sorpresa a mitad de una alta larga
 			// de productos (Fase 4) o con la cola de sincronización llena
-			// (Fase 6). El aviso de actualización visible es Fase 7; por ahora
-			// basta con que el hook exista (ver src/main.tsx).
+			// (Fase 6). El aviso de actualización visible es Fase 7
+			// (src/components/update-banner.tsx).
 			registerType: "prompt",
 			manifest: {
 				name: "Lista de Mercado",
@@ -77,7 +77,15 @@ export default defineConfig({
 		globals: true,
 		// Las pruebas de integración de supabase/tests hablan directo con Postgres (ver
 		// vitest.integration.config.ts) y corren aparte con `pnpm test:integration`: necesitan
-		// `supabase start` arriba, y no tiene sentido bloquear `pnpm test` con eso.
-		exclude: ["**/node_modules/**", "**/dist/**", "supabase/tests/**"],
+		// `supabase start` arriba, y no tiene sentido bloquear `pnpm test` con eso. `e2e/` son
+		// specs de Playwright (`*.spec.ts` calza con el patrón por defecto de Vitest, así que sin
+		// esta exclusión Vitest también intentaría correrlas, y fallan fuera de un navegador real
+		// -- van aparte con `pnpm test:e2e`, ver playwright.config.ts).
+		exclude: [
+			"**/node_modules/**",
+			"**/dist/**",
+			"supabase/tests/**",
+			"e2e/**",
+		],
 	},
 });

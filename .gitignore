@@ -30,6 +30,11 @@ Thumbs.db
 # Cobertura de tests
 coverage/
 
+# Salida de Playwright (Fase 7)
+test-results/
+playwright-report/
+blob-report/
+
 # Export manual de los datos del hogar (D-023, "hace falta un export periódico de los datos del
 # hogar"; plan_implementacion Fase 3). `pnpm export:data` los escribe aquí -- son datos reales del
 # hogar, nunca van al repo público.

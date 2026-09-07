@@ -1,5 +1,6 @@
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { RouterProvider } from "@tanstack/react-router";
+import { UpdateBanner } from "@/components/update-banner";
 import { persistOptions, queryClient } from "@/lib/query-client";
 import { router } from "@/router";
 
@@ -17,6 +18,7 @@ function App() {
 			client={queryClient}
 			persistOptions={persistOptions}
 		>
+			<UpdateBanner />
 			<RouterProvider router={router} />
 		</PersistQueryClientProvider>
 	);

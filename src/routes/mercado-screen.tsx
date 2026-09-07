@@ -27,6 +27,7 @@ import {
 	searchProducts,
 } from "@/lib/selectors";
 import { useMarkListItemChecked } from "@/lib/sync/optimistic";
+import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ListItem, Product, Supermarket } from "@/schemas/domain";
 
 /** D-032: "un aviso al pie durante unos segundos". */
@@ -102,6 +103,17 @@ export function MercadoScreen() {
 			),
 		[listItems, products, supermarkets, categories],
 	);
+
+	// Wake lock mientras haya pendientes (experiencia_usuario §11, Fase 7): `sections` ya viene
+	// filtrada a items activos, así que basta con mirar si queda alguno sin marcar. El hook se
+	// encarga solo de liberar/re-adquirir con la visibilidad; aquí solo se decide la condición de
+	// negocio (pantalla de Mercado montada -- este componente -- y algo por comprar).
+	const hasPending = useMemo(
+		() =>
+			sections.some((section) => section.entries.some((e) => !e.item.checked)),
+		[sections],
+	);
+	useWakeLock(hasPending);
 
 	const liveProducts = useMemo(
 		() => products.filter((p) => p.deleted_at === null),

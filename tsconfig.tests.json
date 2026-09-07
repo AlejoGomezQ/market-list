@@ -19,5 +19,10 @@
 		"erasableSyntaxOnly": true,
 		"noFallthroughCasesInSwitch": true
 	},
-	"include": ["supabase/tests", "vitest.integration.config.ts"]
+	"include": [
+		"supabase/tests",
+		"vitest.integration.config.ts",
+		"e2e",
+		"playwright.config.ts"
+	]
 }

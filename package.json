@@ -12,6 +12,7 @@
 		"lint:fix": "biome check --write .",
 		"test": "vitest run",
 		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test:e2e": "playwright test",
 		"test:watch": "vitest",
 		"gen:types": "supabase gen types typescript --local > src/types/database.ts",
 		"export:data": "supabase db dump --data-only --linked -f backups/household-data.sql"
@@ -35,6 +36,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.12",
+		"@playwright/test": "^1.63.0",
 		"@tailwindcss/vite": "4.3.3",
 		"@testing-library/jest-dom": "^7.0.1",
 		"@testing-library/react": "^16.3.3",
