@@ -175,6 +175,14 @@
 /* ---------------------------------------------------------------------- */
 :root {
 	--safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+	/* Altura del teclado de software = pantalla completa menos el área visible que publica
+	use-visual-viewport.ts. Sin visualViewport (fallback) --vvh no existe y esto es 0px: el drawer
+	queda como siempre (bottom: 0, sin descuento en el pie). */
+	--drawer-kb-height: max(
+		0px,
+		calc(100dvh - var(--vvh, 100dvh) - var(--vv-offset-top, 0px))
+	);
 }
 
 @utility pb-safe {
@@ -187,17 +195,23 @@
 /* relativa a la pantalla completa deja su parte baja (chips, "Marca y    */
 /* categoría") detrás del teclado y sin scroll posible.                   */
 /* use-visual-viewport.ts publica --vvh (alto visible) y --vv-offset-top;  */
-/* aquí acotamos la altura al área visible y levantamos el drawer sobre el */
-/* teclado. Sin visualViewport se cae a 100dvh / 0 y el resultado es el   */
-/* de siempre: `max-height: 80vh`, `bottom: 0`. Regla fuera de @layer para */
-/* ganar a las utilidades de Tailwind sin !important.                     */
+/* aquí apoyamos el drawer pegado sobre el teclado (su borde inferior en   */
+/* el borde superior del teclado) y le damos todo el alto por encima menos */
+/* un "peek" del fondo de 0.75rem. Sin visualViewport se cae a 100dvh / 0  */
+/* y el resultado es el de siempre: `max-height: 80vh`, `bottom: 0`.       */
+/* Regla fuera de @layer para ganar a las utilidades de Tailwind.         */
 /* ---------------------------------------------------------------------- */
 [data-slot="drawer-content"][data-vaul-drawer-direction="bottom"] {
-	max-height: min(80vh, calc(var(--vvh, 100dvh) - 2.5rem));
-	bottom: max(
-		0px,
-		calc(100dvh - var(--vvh, 100dvh) - var(--vv-offset-top, 0px))
-	);
+	max-height: min(80vh, calc(var(--vvh, 100dvh) - 0.75rem));
+	bottom: var(--drawer-kb-height);
+}
+
+/* Campos y botones del drawer a 50px de alto visual (design/NuevoProducto.dc.html); el suelo de
+toque de 44px se mantiene porque 50 > 44. Fuera de @layer para ganar a las utilidades. */
+[data-slot="drawer-body"] [data-slot="input"],
+[data-slot="drawer-body"] select,
+[data-slot="drawer-footer"] button {
+	min-height: 50px;
 }
 
 @layer base {

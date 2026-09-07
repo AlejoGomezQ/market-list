@@ -209,7 +209,7 @@ function ProductForm({
 				</DrawerTitle>
 			</DrawerHeader>
 			<DrawerBody>
-				<div className="flex flex-col gap-1.5">
+				<div className="flex flex-col gap-2">
 					<label
 						htmlFor="product-name"
 						className="text-13 text-muted-foreground"
@@ -245,7 +245,7 @@ function ProductForm({
 					)}
 				</div>
 
-				<div className="flex flex-col gap-1.5">
+				<div className="flex flex-col gap-2">
 					<span className="text-13 text-muted-foreground">Supermercado</span>
 					{liveSupermarkets.length === 0 && (
 						<p className="text-14 text-muted-foreground">
@@ -259,7 +259,7 @@ function ProductForm({
 								aria-pressed={supermarketId === null}
 								onClick={() => setSupermarketId(null)}
 								className={cn(
-									"min-h-[var(--min-height-tap)] rounded-[var(--radius-control)] px-3 text-14",
+									"min-h-[var(--min-height-tap)] rounded-[var(--radius-control)] px-[18px] text-14",
 									supermarketId === null
 										? "bg-accent text-foreground"
 										: "text-muted-foreground",
@@ -275,7 +275,7 @@ function ProductForm({
 								aria-pressed={supermarketId === supermarket.id}
 								onClick={() => setSupermarketId(supermarket.id)}
 								className={cn(
-									"inline-flex min-h-[var(--min-height-tap)] items-center gap-1.5 rounded-[var(--radius-control)] border px-3 text-14",
+									"inline-flex min-h-[var(--min-height-tap)] items-center gap-1.5 rounded-[var(--radius-control)] border px-[18px] text-14",
 									supermarketId === supermarket.id
 										? "border-foreground bg-foreground text-background"
 										: "border-border text-foreground",
@@ -298,7 +298,7 @@ function ProductForm({
 								setNewSupermarketError(null);
 								setNewSupermarketOpen(true);
 							}}
-							className="inline-flex min-h-[var(--min-height-tap)] items-center gap-1 rounded-[var(--radius-control)] border border-border border-dashed px-3 text-14 text-muted-foreground"
+							className="inline-flex min-h-[var(--min-height-tap)] items-center gap-1 rounded-[var(--radius-control)] border border-border border-dashed px-[18px] text-14 text-muted-foreground"
 						>
 							<Plus aria-hidden="true" className="size-4" strokeWidth={1.75} />
 							Nuevo supermercado
@@ -310,14 +310,14 @@ function ProductForm({
 					<button
 						type="button"
 						onClick={() => setExpanded(true)}
-						className="flex min-h-[var(--min-height-tap)] items-center gap-1 self-start text-14 text-muted-foreground"
+						className="flex min-h-[52px] items-center gap-2 border-y border-border text-14 text-muted-foreground"
 					>
 						<Plus aria-hidden="true" className="size-4" strokeWidth={1.75} />
 						Marca y categoría
 					</button>
 				) : (
-					<div className="flex flex-col gap-3 border-t border-border pt-3">
-						<div className="flex flex-col gap-1.5">
+					<div className="flex flex-col gap-[22px] border-t border-border pt-3">
+						<div className="flex flex-col gap-2">
 							<label
 								htmlFor="product-brand"
 								className="text-13 text-muted-foreground"
@@ -331,7 +331,7 @@ function ProductForm({
 								placeholder="Marca (opcional)"
 							/>
 						</div>
-						<div className="flex flex-col gap-1.5">
+						<div className="flex flex-col gap-2">
 							<label
 								htmlFor="product-category"
 								className="text-13 text-muted-foreground"

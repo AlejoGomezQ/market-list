@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import type * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 import { cn } from "@/lib/utils";
@@ -5,7 +6,17 @@ import { cn } from "@/lib/utils";
 function Drawer({
 	...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-	return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
+	return (
+		// `repositionInputs={false}`: vaul, por defecto, sube el drawer para que el input enfocado no
+		// quede tapado por el teclado de iOS. Ese trabajo ya lo hace nuestro CSS a partir de --vvh
+		// (index.css, regla de `[data-slot="drawer-content"]`); si vaul también lo hace, el drawer se
+		// levanta dos veces y queda flotando con espacio muerto debajo.
+		<DrawerPrimitive.Root
+			data-slot="drawer"
+			repositionInputs={false}
+			{...props}
+		/>
+	);
 }
 
 function DrawerTrigger({
@@ -64,23 +75,41 @@ function DrawerContent({
 				)}
 				{...props}
 			>
-				<div className="mx-auto mt-4 hidden h-1 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
+				<div className="mx-auto mt-3 hidden h-1 w-[100px] shrink-0 rounded-full bg-border group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
 				{children}
 			</DrawerPrimitive.Content>
 		</DrawerPortal>
 	);
 }
 
-function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
+/**
+ * Cabecera fija del drawer. Lleva su propia X de cierre (experiencia_usuario §6, y en PWA a pantalla
+ * completa no hay botón de atrás): `DrawerClose` cierra el `Drawer` más cercano sin necesitar un
+ * handler, así que sirve igual para el drawer principal y para los anidados. El asa de arrastre
+ * sigue estando (la pinta `DrawerContent`).
+ */
+function DrawerHeader({
+	className,
+	children,
+	...props
+}: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="drawer-header"
 			className={cn(
-				"flex shrink-0 flex-col gap-0.5 p-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center md:gap-0.5 md:text-left",
+				"relative flex shrink-0 flex-col gap-1 px-5 pt-3 pb-0 text-center",
 				className,
 			)}
 			{...props}
-		/>
+		>
+			{children}
+			<DrawerClose
+				aria-label="Cerrar"
+				className="absolute top-2 right-3 flex size-11 items-center justify-center rounded-[var(--radius-control)] text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+			>
+				<X aria-hidden="true" className="size-5" strokeWidth={1.75} />
+			</DrawerClose>
+		</div>
 	);
 }
 
@@ -95,7 +124,7 @@ function DrawerBody({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="drawer-body"
 			className={cn(
-				"flex min-h-0 flex-1 flex-col gap-4 touch-pan-y overflow-y-auto overscroll-contain px-4 pb-4",
+				"flex min-h-0 flex-1 flex-col gap-[22px] touch-pan-y overflow-y-auto overscroll-contain px-5 pt-[26px] pb-5",
 				className,
 			)}
 			{...props}
@@ -103,12 +132,19 @@ function DrawerBody({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
+/**
+ * Pie fijo con las acciones. El `pb` resta la altura del teclado al safe-area: en iOS
+ * `env(safe-area-inset-bottom)` sigue valiendo ~34px con el teclado abierto aunque esa franja quede
+ * tapada, así que cuando el drawer está apoyado sobre el teclado (`--drawer-kb-height` > 0, ver
+ * index.css) ese respiro sobra y se descuenta. Sin teclado, `--drawer-kb-height` es 0 y el pie
+ * respeta el safe-area entero. Los botones del pie miden 50px de alto (regla en index.css).
+ */
 function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="drawer-footer"
 			className={cn(
-				"mt-auto flex shrink-0 flex-col gap-2 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]",
+				"mt-auto flex shrink-0 flex-col gap-2.5 px-5 pt-[22px] pb-[calc(1rem+max(0px,env(safe-area-inset-bottom,0px)-var(--drawer-kb-height,0px)))]",
 				className,
 			)}
 			{...props}
@@ -124,7 +160,7 @@ function DrawerTitle({
 		<DrawerPrimitive.Title
 			data-slot="drawer-title"
 			className={cn(
-				"font-heading text-base font-medium text-foreground",
+				"font-heading text-20 font-semibold text-foreground",
 				className,
 			)}
 			{...props}
