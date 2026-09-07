@@ -37,6 +37,8 @@ function listItem(overrides: Partial<ListItem> = {}): ListItem {
 		updated_at: ts,
 		removed_at: null,
 		removed_reason: null,
+		purchase_batch_id: null,
+		purchase_total: null,
 		field_updated_at: {},
 		...overrides,
 	};

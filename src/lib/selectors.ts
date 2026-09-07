@@ -223,6 +223,94 @@ export function groupProductsBySupermarket(
 	return sections;
 }
 
+export interface PurchaseHistoryGroup {
+	/** `null` en lápidas pre-migración (agrupadas por `removed_at`) -- ver abajo. */
+	batchId: string | null;
+	/** `removed_at` del lote (mismo ISO para todas sus lápidas). */
+	purchasedAt: string;
+	/** `null` es el grupo "Sin asignar" (D-002). */
+	supermarket: Supermarket | null;
+	/** Total de la compra si se registró al finalizar (backlog §6); leído, no sumado. */
+	total: number | null;
+	entries: Array<{ product: Product; quantity: number }>;
+}
+
+/**
+ * Historial de compras (backlog_v2 §5 y §6): las lápidas de `list_items` con
+ * `removed_reason === 'purchased'`, agrupadas por lote de finalización, más reciente primero. Los
+ * datos ya se acumulan desde D-026 -- esto es solo la vista de lectura, sin quinta consulta.
+ *
+ * - Agrupa por `purchase_batch_id`. Las lápidas anteriores a la migración del historial no lo
+ *   tienen: se agrupan por `removed_at` exacto como fallback (quedan como grupos sueltos; es
+ *   cosmético y aceptado).
+ * - `supermarket`: el del primer producto del grupo que apunte a uno vivo, con el mismo criterio de
+ *   `groupMarketListBySupermarket` (supermercado borrado -> "Sin asignar").
+ * - A diferencia del Mercado y el Catálogo, un producto borrado SÍ entra: el historial muestra el
+ *   nombre que tenía. Solo se omite la entrada si el producto ya no está ni en `products` (no hay
+ *   nombre que mostrar).
+ * - `total` se lee de la primera lápida del grupo (viene repetido en todas), no se suma.
+ */
+export function groupPurchaseHistory(
+	listItems: ListItem[],
+	products: Product[],
+	supermarkets: Supermarket[],
+): PurchaseHistoryGroup[] {
+	const productById = new Map(products.map((product) => [product.id, product]));
+	const liveSupermarketById = new Map(
+		supermarkets.filter((s) => s.deleted_at === null).map((s) => [s.id, s]),
+	);
+
+	const groups = new Map<
+		string,
+		{
+			batchId: string | null;
+			purchasedAt: string;
+			total: number | null;
+			items: ListItem[];
+		}
+	>();
+	for (const item of listItems) {
+		if (item.removed_at === null || item.removed_reason !== "purchased")
+			continue;
+		const key = item.purchase_batch_id ?? `at:${item.removed_at}`;
+		const group = groups.get(key);
+		if (group) {
+			group.items.push(item);
+		} else {
+			groups.set(key, {
+				batchId: item.purchase_batch_id,
+				purchasedAt: item.removed_at,
+				total: item.purchase_total,
+				items: [item],
+			});
+		}
+	}
+
+	const result: PurchaseHistoryGroup[] = [];
+	for (const group of groups.values()) {
+		const entries: Array<{ product: Product; quantity: number }> = [];
+		let supermarket: Supermarket | null = null;
+		for (const item of group.items) {
+			const product = productById.get(item.product_id);
+			if (!product) continue;
+			entries.push({ product, quantity: item.quantity });
+			if (supermarket === null && product.supermarket_id) {
+				supermarket = liveSupermarketById.get(product.supermarket_id) ?? null;
+			}
+		}
+		if (entries.length === 0) continue;
+		result.push({
+			batchId: group.batchId,
+			purchasedAt: group.purchasedAt,
+			supermarket,
+			total: group.total,
+			entries,
+		});
+	}
+
+	return result.sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt));
+}
+
 /** Siguiente `position` libre al dar de alta una fila en una tabla ordenable (supermercados,
  * categorías): el máximo actual más uno, o 0 si la tabla está vacía. */
 export function nextPosition(rows: Array<{ position: number }>): number {

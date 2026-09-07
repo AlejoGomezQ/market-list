@@ -80,6 +80,8 @@ export const listItemSchema = z.object({
 	updated_at: timestamp,
 	removed_at: timestamp.nullable(), // lápida NO absorbente: D-032 la pone a nulo, arquitectura §4.1
 	removed_reason: z.enum(["purchased", "removed"]).nullable(),
+	purchase_batch_id: uuid.nullable(), // historial V2 (CAMINO A): agrupa el lote de finalizar
+	purchase_total: z.number().nonnegative().nullable(), // total opcional de la compra (backlog §6)
 	field_updated_at: fieldUpdatedAt,
 });
 export type ListItem = z.infer<typeof listItemSchema>;

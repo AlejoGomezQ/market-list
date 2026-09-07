@@ -18,7 +18,7 @@ El proyecto está en fase **pre-implementación**: no hay código, ni gestor de 
 
 - **Una sola mutación** (`mutationKey: ['sync']`, `scope: {id:'sync'}`, registrada con `setMutationDefaults`), no una por operación. `scope` y los defaults son opciones de la definición, así que veinte mutaciones son veinte sitios que tocar después.
 - **La unidad es el parche** `{entidad, id, ts, campos}`, con `ts` del momento en que el usuario actuó, no del envío.
-- **Cuatro consultas persistidas**, una por tabla, del hogar completo, con `gcTime: Infinity`. Todo filtro, orden, agrupación y búsqueda se deriva en memoria. Una búsqueda como consulta parametrizada llena la caché de entradas efímeras y deja de funcionar sin red.
+- **Cuatro consultas persistidas**, una por tabla, del hogar completo, con `gcTime: Infinity`. Todo filtro, orden, agrupación y búsqueda se deriva en memoria. Una búsqueda como consulta parametrizada llena la caché de entradas efímeras y deja de funcionar sin red. El historial de compras (D-042) **no añade una quinta**: se deriva en memoria de `list_items` (lápidas con `removed_reason = 'purchased'`), igual que todo lo demás.
 - **Escrituras optimistas desde las fases en línea**, no al final: RNF-001 prohíbe el indicador de carga en acciones frecuentes.
 - **Los items de lista se indexan por `product_id`**, no por su id: el dominio garantiza uno activo por producto, así que es su clave natural y evita reconciliar ids tras C-005.
 
@@ -100,7 +100,7 @@ Las ideas de V2 que van surgiendo del uso real (Fase 8) se recogen en `docs/back
 
 Se usa **con una mano, de pie, empujando un carro**. Eso decide casi todo (detalle en `docs/experiencia_usuario_v0.1.md`):
 
-- Dos pestañas abajo, **Mercado** como pantalla de arranque (D-033). Todo lo que se abre encima es *drawer* desde abajo, nunca diálogo centrado: el pulgar está abajo.
+- Tres pestañas abajo (Mercado / Catálogo / Historial), con **Mercado** como pantalla de arranque (D-033, ampliada por D-042: Historial se suma a las dos originales). Todo lo que se abre encima es *drawer* desde abajo, nunca diálogo centrado: el pulgar está abajo.
 - Área de toque mínima de 44 px, y **la fila entera es la zona de toque**, no el icono. En el Mercado, tocar una fila la marca; abrir el detalle solo se hace desde el Catálogo.
 - Ninguna acción frecuente muestra indicador de carga: las escrituras son optimistas. Nada se revierte solo en pantalla; si una mutación cae en cuarentena, se avisa y el estado local se mantiene.
 - iOS no soporta `navigator.vibrate`: la respuesta al marcar es visual, no háptica.

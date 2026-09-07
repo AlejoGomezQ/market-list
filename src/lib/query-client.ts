@@ -133,7 +133,8 @@ export const persistOptions: OmitKeyof<
 	maxAge: Number.POSITIVE_INFINITY,
 	// §8.2/D-030: clave de versión de esquema. Subir este valor descarta la caché entera sin
 	// preguntar, que es la respuesta correcta ante una caché escrita por una versión anterior.
-	buster: "v1",
+	// v2: list_items gana purchase_batch_id / purchase_total (historial V2, CAMINO A).
+	buster: "v2",
 	dehydrateOptions: {
 		// Decisión explícita (Fase 2a): solo se persisten las cuatro consultas de tabla del hogar,
 		// y de ellas solo el estado 'success' (comportamiento por defecto de
