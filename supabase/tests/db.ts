@@ -122,6 +122,24 @@ export async function joinHousehold(
 	};
 }
 
+export type RegeneratedCode = {
+	householdId: string;
+	joinCode: string;
+};
+
+export async function regenerateHouseholdCode(
+	client: Client,
+): Promise<RegeneratedCode> {
+	const result = await client.query(
+		"select regenerate_household_code() as result",
+	);
+	const row = result.rows[0].result as {
+		household_id: string;
+		join_code: string;
+	};
+	return { householdId: row.household_id, joinCode: row.join_code };
+}
+
 export type PatchResult = { entity: string; id: string; status: string };
 
 export async function syncPush(

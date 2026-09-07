@@ -9,6 +9,7 @@ import {
 	createProduct,
 	joinHousehold,
 	patch,
+	regenerateHouseholdCode,
 	syncPush,
 	type TestUser,
 	tsAt,
@@ -131,6 +132,67 @@ describe("join_household", () => {
 		await expect(joinHousehold(b.client, "ZZZZZZZZ")).rejects.toThrow(
 			/demasiados intentos/,
 		);
+	});
+});
+
+describe("regenerate_household_code", () => {
+	it("cambia el código y sigue dejando entrar con el nuevo (D-014)", async () => {
+		const a = await newUser();
+		const { householdId, joinCode } = await createHousehold(a.client, "Casa");
+
+		const regenerated = await regenerateHouseholdCode(a.client);
+
+		expect(regenerated.householdId).toBe(householdId);
+		expect(regenerated.joinCode).not.toBe(joinCode);
+		expect(regenerated.joinCode).toHaveLength(8);
+
+		const c = await newUser();
+		const joined = await joinHousehold(c.client, regenerated.joinCode);
+		expect(joined.householdId).toBe(householdId);
+	});
+
+	it("el código anterior deja de servir", async () => {
+		const a = await newUser();
+		const { joinCode } = await createHousehold(a.client, "Casa");
+		await regenerateHouseholdCode(a.client);
+
+		const b = await newUser();
+		await expect(joinHousehold(b.client, joinCode)).rejects.toThrow(
+			/código inválido/,
+		);
+	});
+
+	it("expulsa a los demás dispositivos: borra su membresía (D-040)", async () => {
+		const a = await newUser();
+		const b = await newUser();
+		const { householdId, joinCode } = await createHousehold(a.client, "Casa");
+		await joinHousehold(b.client, joinCode);
+
+		await regenerateHouseholdCode(a.client);
+
+		const members = await admin.query(
+			"select user_id from household_members where household_id = $1",
+			[householdId],
+		);
+		expect(members.rows.map((r) => r.user_id)).toEqual([a.userId]);
+	});
+
+	it("quien regenera conserva su propia membresía", async () => {
+		const a = await newUser();
+		const { householdId } = await createHousehold(a.client, "Casa");
+
+		await regenerateHouseholdCode(a.client);
+
+		const membership = await admin.query(
+			"select 1 from household_members where household_id = $1 and user_id = $2",
+			[householdId, a.userId],
+		);
+		expect(membership.rowCount).toBe(1);
+	});
+
+	it("rechaza a quien no pertenece a ningún hogar", async () => {
+		const a = await newUser();
+		await expect(regenerateHouseholdCode(a.client)).rejects.toThrow();
 	});
 });
 
