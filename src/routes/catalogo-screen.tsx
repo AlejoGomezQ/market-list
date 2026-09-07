@@ -132,7 +132,7 @@ export function CatalogoScreen() {
 				/>
 			</div>
 
-			<div className="flex-1 overflow-y-auto pb-24">
+			<div className="min-h-0 flex-1 overflow-y-auto pb-24">
 				{liveProducts.length === 0 ? (
 					<p className="px-8 pt-16 text-center text-20 font-bold text-foreground wdth-75">
 						Añade lo que sueles comprar.

@@ -281,7 +281,7 @@ export function MercadoScreen() {
 				)}
 			</header>
 
-			<div className="flex-1 overflow-y-auto pb-28">
+			<div className="min-h-0 flex-1 overflow-y-auto pb-28">
 				{sections.length === 0 ? (
 					<div className="flex flex-col items-center gap-3 px-8 pt-24 text-center">
 						{/* Una invitación, no un lamento (identidad_visual §8): se le da presencia con

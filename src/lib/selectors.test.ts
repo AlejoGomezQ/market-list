@@ -344,11 +344,11 @@ describe("formatMarketListForSharing", () => {
 		product: product({ id: over.id ?? "prod-1", name: over.name ?? "Leche" }),
 	});
 
-	it("starts with the supermarket name as header, then a blank line", () => {
+	it("starts with the supermarket name in WhatsApp bold, then a blank line", () => {
 		const text = formatMarketListForSharing("Supermu", [
 			entry({ name: "Leche" }),
 		]);
-		expect(text).toBe("Supermu\n\nLeche");
+		expect(text).toBe("*Supermu*\n\n• Leche");
 	});
 
 	it("lists only pending products, excluding the checked ones", () => {
@@ -356,7 +356,7 @@ describe("formatMarketListForSharing", () => {
 			entry({ id: "p1", name: "Leche", checked: false }),
 			entry({ id: "p2", name: "Pan", checked: true }),
 		]);
-		expect(text).toBe("Supermu\n\nLeche");
+		expect(text).toBe("*Supermu*\n\n• Leche");
 	});
 
 	it("appends ' x{n}' only when quantity is greater than 1", () => {
@@ -364,14 +364,14 @@ describe("formatMarketListForSharing", () => {
 			entry({ id: "p1", name: "Leche", quantity: 1 }),
 			entry({ id: "p2", name: "Huevos", quantity: 12 }),
 		]);
-		expect(text).toBe("Supermu\n\nLeche\nHuevos x12");
+		expect(text).toBe("*Supermu*\n\n• Leche\n• Huevos x12");
 	});
 
-	it("returns just the header when nothing is pending", () => {
+	it("returns just the bold header when nothing is pending", () => {
 		const text = formatMarketListForSharing("Supermu", [
 			entry({ name: "Leche", checked: true }),
 		]);
-		expect(text).toBe("Supermu");
+		expect(text).toBe("*Supermu*");
 	});
 
 	it("contains no emojis", () => {

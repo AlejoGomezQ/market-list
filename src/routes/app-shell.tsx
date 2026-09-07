@@ -27,7 +27,11 @@ export function AppShell() {
 	useSyncEngine(householdId, queryClient);
 
 	return (
-		<div className="flex min-h-dvh flex-col">
+		// Altura fija al viewport (`h-dvh`, no `min-h-dvh`) y `overflow-hidden`: la página en sí
+		// nunca scrollea, así la cabecera de cada pantalla y la barra de pestañas quedan clavadas.
+		// El único contenedor con scroll es la lista dentro de cada pantalla. `min-h-0` en `<main>`
+		// es lo que deja que ese hijo flex scrollee en vez de estirar el layout.
+		<div className="flex h-dvh flex-col overflow-hidden">
 			{supabaseConfigError ? (
 				<p
 					role="alert"
@@ -36,7 +40,7 @@ export function AppShell() {
 					{supabaseConfigError}
 				</p>
 			) : null}
-			<main className="flex-1 overflow-y-auto">
+			<main className="min-h-0 flex-1 overflow-hidden">
 				<Outlet />
 			</main>
 			<BottomNav />
