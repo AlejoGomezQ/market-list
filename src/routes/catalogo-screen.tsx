@@ -168,26 +168,8 @@ export function CatalogoScreen() {
 								return (
 									<div
 										key={product.id}
-										className="relative flex min-h-[54px] items-center pl-4"
+										className="flex min-h-[54px] items-center pl-4"
 									>
-										{/* Producto ya en la lista de mercado (RN-002): una barra a la izquierda
-										para leerlo de un vistazo, con el color del supermercado de la sección
-										(identidad_visual §2, "el color pertenece a los supermercados"); gris
-										acromático en "Sin asignar", que no tiene color. No desplaza el texto:
-										va absoluta, el nombre siempre arranca en la misma vertical (§4). */}
-										{activeItem && (
-											<span
-												aria-hidden="true"
-												className={cn(
-													"absolute inset-y-0 left-0 w-[3px]",
-													section.supermarket
-														? supermarketColorClass(
-																section.supermarket.position,
-															)
-														: "bg-muted-foreground",
-												)}
-											/>
-										)}
 										{/* Abrir detalle solo se hace desde el Catálogo, tocando el nombre
 										(experiencia_usuario §5/§8); el control de cantidad de la derecha
 										necesita su propia zona de toque (D-034), así que la fila ya no es un
@@ -197,7 +179,18 @@ export function CatalogoScreen() {
 											onClick={() => setDrawer({ mode: "edit", product })}
 											className="flex min-h-[var(--min-height-tap)] flex-1 items-center gap-2 py-2 text-left"
 										>
-											<span className="text-17 text-foreground">
+											{/* "En la lista" se lee por peso y tinta, no por color: el color
+											pertenece solo a los supermercados (identidad_visual §2, D-036) y un
+											matiz de "agregado" chocaría con una sección de color rojo. El propio
+											control (carrito -> − N +) ya confirma el alta. */}
+											<span
+												className={cn(
+													"text-17",
+													activeItem
+														? "font-medium text-foreground"
+														: "text-muted-foreground",
+												)}
+											>
 												{product.name}
 											</span>
 											{product.brand && (
