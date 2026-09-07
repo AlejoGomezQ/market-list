@@ -81,6 +81,9 @@ export function MercadoScreen() {
 	const [search, setSearch] = useState("");
 	const [finalizeConfirm, setFinalizeConfirm] =
 		useState<FinalizeConfirmState | null>(null);
+	// backlog §6: total gastado, opcional. Se guarda como texto crudo mientras el drawer está
+	// abierto y se parsea a número (o `null`) al confirmar; finalizar nunca se bloquea por esto.
+	const [finalizeTotal, setFinalizeTotal] = useState<string>("");
 	const [lastFinalized, setLastFinalized] = useState<{
 		supermarketName: string;
 		itemIds: string[];
@@ -166,6 +169,7 @@ export function MercadoScreen() {
 		staying: number,
 	) {
 		if (itemIds.length === 0) return;
+		setFinalizeTotal("");
 		// D-001/arquitectura §3: se captura AQUÍ, al pulsar, el conjunto exacto de ids marcados --
 		// `itemIds` ya viene de `MarketSection` con esa misma captura. Lo que el otro dispositivo
 		// agregue o marque mientras este drawer de confirmación sigue abierto no puede aparecer en
@@ -179,7 +183,10 @@ export function MercadoScreen() {
 
 	function handleConfirmFinalize() {
 		if (!finalizeConfirm) return;
-		listItemMutations.finalizeSection(finalizeConfirm.itemIds);
+		// Solo dígitos: "" o cualquier basura -> null (backlog §6, el total es opcional).
+		const digits = finalizeTotal.replace(/\D/g, "");
+		const total = digits === "" ? null : Number(digits);
+		listItemMutations.finalizeSection(finalizeConfirm.itemIds, total);
 
 		if (undoTimer.current) clearTimeout(undoTimer.current);
 		const finalized = {
@@ -327,20 +334,31 @@ export function MercadoScreen() {
 					<span className="text-14">
 						Se finalizó la compra en {lastFinalized.supermarketName}.
 					</span>
-					<button
-						type="button"
-						onClick={handleUndo}
-						className="min-h-[var(--min-height-tap)] px-2 text-14 font-bold underline underline-offset-2"
-					>
-						Deshacer
-					</button>
+					<div className="flex shrink-0 items-center gap-1">
+						<Link
+							to="/historial"
+							className="flex min-h-[var(--min-height-tap)] items-center px-2 text-14 underline underline-offset-2"
+						>
+							Ver historial
+						</Link>
+						<button
+							type="button"
+							onClick={handleUndo}
+							className="min-h-[var(--min-height-tap)] px-2 text-14 font-bold underline underline-offset-2"
+						>
+							Deshacer
+						</button>
+					</div>
 				</div>
 			)}
 
 			<Drawer
 				open={finalizeConfirm !== null}
 				onOpenChange={(open) => {
-					if (!open) setFinalizeConfirm(null);
+					if (!open) {
+						setFinalizeConfirm(null);
+						setFinalizeTotal("");
+					}
 				}}
 			>
 				<DrawerContent>
@@ -363,6 +381,31 @@ export function MercadoScreen() {
 								<p className="pt-2 text-13 text-muted-foreground">
 									Los productos siguen en tu catálogo.
 								</p>
+								{/* backlog §6: total gastado, opcional. `$` como prefijo fijo dentro del
+								marco del campo (no un placeholder que se borre); teclado numérico en iOS. */}
+								<label
+									htmlFor="finalize-total"
+									className="pt-2 text-13 text-muted-foreground"
+								>
+									Total (opcional)
+								</label>
+								<div className="flex items-center gap-2 rounded-[var(--radius-control)] border border-input px-3">
+									<span
+										aria-hidden="true"
+										className="text-17 text-muted-foreground"
+									>
+										$
+									</span>
+									<Input
+										id="finalize-total"
+										type="text"
+										inputMode="numeric"
+										aria-label="Total gastado (opcional)"
+										value={finalizeTotal}
+										onChange={(event) => setFinalizeTotal(event.target.value)}
+										className="border-0 px-0 focus-visible:ring-0"
+									/>
+								</div>
 							</DrawerBody>
 							<DrawerFooter>
 								<Button

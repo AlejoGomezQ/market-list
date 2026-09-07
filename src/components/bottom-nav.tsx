@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { LayoutGrid, ShoppingCart } from "lucide-react";
+import { LayoutGrid, Receipt, ShoppingCart } from "lucide-react";
 
 /**
- * Barra de navegación de dos pestañas (D-033), fija abajo. Mercado es la
- * pantalla de arranque. Sin botón de atrás en modo pantalla completa: esta
- * barra es la única navegación de nivel superior, siempre visible.
+ * Barra de navegación de tres pestañas (D-033 revisada por D-042: Historial se suma a Mercado y
+ * Catálogo), fija abajo. Mercado sigue siendo la pantalla de arranque. Sin botón de atrás en modo
+ * pantalla completa: esta barra es la única navegación de nivel superior, siempre visible.
  *
  * - Área de toque: min-height 44px (--min-height-tap), toda la pestaña.
  * - Safe area: `pb-safe` (docs/experiencia_usuario_v0.1.md, viewport-fit=cover).
@@ -16,6 +16,7 @@ import { LayoutGrid, ShoppingCart } from "lucide-react";
 const TABS = [
 	{ to: "/", label: "Mercado", Icon: ShoppingCart },
 	{ to: "/catalogo", label: "Catálogo", Icon: LayoutGrid },
+	{ to: "/historial", label: "Historial", Icon: Receipt },
 ] as const;
 
 export function BottomNav() {

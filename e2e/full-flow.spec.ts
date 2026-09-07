@@ -70,6 +70,8 @@ test("crear hogar, dar de alta un producto, agregarlo al mercado, marcarlo y fin
 	await expect(
 		page.getByRole("heading", { name: /Finalizar compra en/ }),
 	).toBeVisible();
+	// backlog §6: total gastado, opcional. Se registra para verlo luego en el Historial.
+	await page.getByLabel("Total gastado (opcional)").fill("85400");
 	await page.getByRole("button", { name: "Finalizar", exact: true }).click();
 
 	// El aviso de deshacer confirma que finalizar corrió de verdad, y el item marcado sale de
@@ -77,4 +79,14 @@ test("crear hogar, dar de alta un producto, agregarlo al mercado, marcarlo y fin
 	// nada más, así que el Mercado vuelve al estado vacío).
 	await expect(page.getByText(/Se finalizó la compra en/)).toBeVisible();
 	await expect(page.getByText("Nada que comprar ahora mismo.")).toBeVisible();
+
+	// Historial (backlog_v2 §5 y §6, D-042): la compra recién finalizada aparece con su
+	// supermercado, sus productos y el total formateado ($ + separador de miles, sin decimales).
+	await page.getByRole("link", { name: "Historial", exact: true }).click();
+	await expect(page.getByRole("heading", { name: "Historial" })).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Sin asignar" }),
+	).toBeVisible();
+	await expect(page.getByText(productName, { exact: true })).toBeVisible();
+	await expect(page.getByText("$85.400")).toBeVisible();
 });

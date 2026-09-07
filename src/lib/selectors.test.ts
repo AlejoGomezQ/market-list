@@ -10,6 +10,7 @@ import {
 	formatMarketListForSharing,
 	groupMarketListBySupermarket,
 	groupProductsBySupermarket,
+	groupPurchaseHistory,
 	indexActiveListItemsByProduct,
 	nextPosition,
 	searchProducts,
@@ -333,6 +334,142 @@ describe("groupProductsBySupermarket", () => {
 	it("excludes deleted products entirely (RF-003)", () => {
 		const products = [product({ id: "p-gone", deleted_at: ts })];
 		expect(groupProductsBySupermarket(products, [])).toHaveLength(0);
+	});
+});
+
+describe("groupPurchaseHistory", () => {
+	const sm = supermarket({ id: "sm-1", name: "Supermu", position: 0 });
+	const leche = product({
+		id: "p-leche",
+		name: "Leche",
+		supermarket_id: "sm-1",
+	});
+	const pan = product({ id: "p-pan", name: "Pan", supermarket_id: "sm-1" });
+
+	const purchased = (over: Partial<ListItem>): ListItem =>
+		listItem({
+			removed_at: ts,
+			removed_reason: "purchased",
+			purchase_batch_id: "batch-1",
+			...over,
+		});
+
+	it("groups tombstones by purchase_batch_id", () => {
+		const items = [
+			purchased({ id: "li-1", product_id: "p-leche", quantity: 2 }),
+			purchased({ id: "li-2", product_id: "p-pan" }),
+		];
+		const groups = groupPurchaseHistory(items, [leche, pan], [sm]);
+		expect(groups).toHaveLength(1);
+		expect(groups[0].batchId).toBe("batch-1");
+		expect(groups[0].supermarket?.name).toBe("Supermu");
+		expect(
+			groups[0].entries.map((e) => `${e.product.name} x${e.quantity}`).sort(),
+		).toEqual(["Leche x2", "Pan x1"]);
+	});
+
+	it("orders groups by purchase date, most recent first", () => {
+		const items = [
+			purchased({
+				id: "li-old",
+				product_id: "p-leche",
+				removed_at: "2026-09-01T10:00:00.000Z",
+				purchase_batch_id: "batch-old",
+			}),
+			purchased({
+				id: "li-new",
+				product_id: "p-pan",
+				removed_at: "2026-09-09T10:00:00.000Z",
+				purchase_batch_id: "batch-new",
+			}),
+		];
+		const groups = groupPurchaseHistory(items, [leche, pan], [sm]);
+		expect(groups.map((g) => g.batchId)).toEqual(["batch-new", "batch-old"]);
+	});
+
+	it("keeps only 'purchased' tombstones, not 'removed' ones or active items", () => {
+		const items = [
+			purchased({ id: "li-p", product_id: "p-leche" }),
+			listItem({
+				id: "li-r",
+				product_id: "p-pan",
+				removed_at: ts,
+				removed_reason: "removed",
+			}),
+			listItem({ id: "li-active", product_id: "p-pan" }),
+		];
+		const groups = groupPurchaseHistory(items, [leche, pan], [sm]);
+		expect(groups).toHaveLength(1);
+		expect(groups[0].entries.map((e) => e.product.name)).toEqual(["Leche"]);
+	});
+
+	it("shows a product that was deleted after the purchase, by its historical name", () => {
+		const gone = product({
+			id: "p-gone",
+			name: "Yogur",
+			supermarket_id: "sm-1",
+			deleted_at: ts,
+		});
+		const items = [purchased({ id: "li-1", product_id: "p-gone" })];
+		const groups = groupPurchaseHistory(items, [gone], [sm]);
+		expect(groups).toHaveLength(1);
+		expect(groups[0].entries[0].product.name).toBe("Yogur");
+	});
+
+	it("omits an entry whose product is gone from the catalog entirely", () => {
+		const items = [
+			purchased({ id: "li-1", product_id: "p-leche" }),
+			purchased({ id: "li-2", product_id: "p-vanished" }),
+		];
+		const groups = groupPurchaseHistory(items, [leche], [sm]);
+		expect(groups[0].entries.map((e) => e.product.name)).toEqual(["Leche"]);
+	});
+
+	it('puts a group with no live supermarket in "Sin asignar"', () => {
+		const sal = product({ id: "p-sal", name: "Sal", supermarket_id: null });
+		const items = [purchased({ id: "li-1", product_id: "p-sal" })];
+		const groups = groupPurchaseHistory(items, [sal], []);
+		expect(groups[0].supermarket).toBeNull();
+	});
+
+	it("reads the total from a tombstone without summing the repeated value", () => {
+		const items = [
+			purchased({ id: "li-1", product_id: "p-leche", purchase_total: 50000 }),
+			purchased({ id: "li-2", product_id: "p-pan", purchase_total: 50000 }),
+		];
+		const groups = groupPurchaseHistory(items, [leche, pan], [sm]);
+		expect(groups[0].total).toBe(50000);
+	});
+
+	it("falls back to grouping pre-migration tombstones by their exact removed_at", () => {
+		const items = [
+			listItem({
+				id: "li-1",
+				product_id: "p-leche",
+				removed_at: "2026-09-05T10:00:00.000Z",
+				removed_reason: "purchased",
+				purchase_batch_id: null,
+			}),
+			listItem({
+				id: "li-2",
+				product_id: "p-pan",
+				removed_at: "2026-09-05T10:00:00.000Z",
+				removed_reason: "purchased",
+				purchase_batch_id: null,
+			}),
+			listItem({
+				id: "li-3",
+				product_id: "p-leche",
+				removed_at: "2026-09-06T11:00:00.000Z",
+				removed_reason: "purchased",
+				purchase_batch_id: null,
+			}),
+		];
+		const groups = groupPurchaseHistory(items, [leche, pan], [sm]);
+		expect(groups).toHaveLength(2);
+		expect(groups[0].purchasedAt).toBe("2026-09-06T11:00:00.000Z");
+		expect(groups[0].batchId).toBeNull();
+		expect(groups[1].entries).toHaveLength(2);
 	});
 });
 

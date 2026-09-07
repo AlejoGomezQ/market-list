@@ -408,9 +408,20 @@ cosa. Como el orden global de categorías es lo que ordena los items dentro de c
 (D-031), no poder tocarlo dejaría al usuario atado a una siembra inicial que casi con seguridad no
 coincide con su tienda.
 
----
+### D-042 — Tres pestañas: Mercado, Catálogo e Historial
 
-## 6. Lo que sigue abierto
+Revierte parcialmente D-033: la barra inferior pasa de dos pestañas a tres, sumando **Historial**.
+Mercado sigue siendo la pantalla de arranque y Ajustes sigue sin ocupar pestaña.
+
+El historial de compras (backlog_v2 §5 y §6) es una vista de solo lectura sobre las lápidas que ya
+guarda `list_items` (`removed_reason = 'purchased'`, D-026). No cabe como sub-sección de Mercado ni
+de Catálogo sin fricción: Mercado es "lo que falta ahora" y no admite un tercer modo sin un toque
+extra en el peor momento (el pasillo), y Catálogo es el inventario permanente, no un registro
+temporal. El uso real de la Fase 8 pidió consultarlo de un vistazo, así que gana su propia pestaña.
+
+Es una pestaña de consulta ocasional, no de las de "un toque en el pasillo", pero tampoco se visita
+tres veces al año como Ajustes: vive en la barra, no tras un icono. No añade una quinta consulta
+persistida — se deriva en memoria de `list_items` con el resto.
 
 Nada de esto bloquea la fase de definición:
 

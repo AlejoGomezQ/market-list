@@ -9,6 +9,7 @@ import { getHouseholdLink } from "@/lib/household-link";
 import { AjustesDrawer } from "@/routes/ajustes-screen";
 import { AppShell } from "@/routes/app-shell";
 import { CatalogoScreen } from "@/routes/catalogo-screen";
+import { HistorialScreen } from "@/routes/historial-screen";
 import { MercadoScreen } from "@/routes/mercado-screen";
 import { OnboardingScreen } from "@/routes/onboarding-screen";
 
@@ -22,7 +23,8 @@ import { OnboardingScreen } from "@/routes/onboarding-screen";
  * - `onboarding`: pantalla previa a todo lo demás, sin barra de pestañas, mientras el dispositivo
  *   no tenga hogar vinculado (D-014 vía `household-link.ts`).
  * - `shell`: ruta sin tramo propio en la URL (`id`, no `path` — un "layout route" de TanStack
- *   Router), que monta `AppShell` (barra de dos pestañas, D-033) alrededor de Mercado y Catálogo.
+ *   Router), que monta `AppShell` (barra de tres pestañas, D-033 revisada por D-042) alrededor de
+ *   Mercado, Catálogo e Historial.
  *
  * El guardado de cada rama es el espejo de la otra en `beforeLoad`: sin hogar vinculado, cualquier
  * ruta de `shell` redirige a onboarding; con hogar ya vinculado, onboarding redirige a Mercado. La
@@ -63,6 +65,12 @@ const catalogoRoute = createRoute({
 	component: CatalogoScreen,
 });
 
+const historialRoute = createRoute({
+	getParentRoute: () => shellRoute,
+	path: "/historial",
+	component: HistorialScreen,
+});
+
 /**
  * Ajustes "vive tras un icono en la cabecera del Catálogo, no en la barra" (experiencia_usuario
  * §3) y se abre como drawer (D-023), nunca como pantalla propia: por eso cuelga de `catalogoRoute`
@@ -80,6 +88,7 @@ const routeTree = rootRoute.addChildren([
 	shellRoute.addChildren([
 		mercadoRoute,
 		catalogoRoute.addChildren([ajustesRoute]),
+		historialRoute,
 	]),
 ]);
 

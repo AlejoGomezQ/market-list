@@ -78,34 +78,59 @@ lo anticipa: *"El recorrido propio de cada supermercado (RF-021) sustituirá est
 - Una UI para reordenar con una mano (flechas arriba/abajo antes que arrastrar), probablemente en
   Ajustes por supermercado, o en la propia sección de Mercado.
 
-## 5. Historial de compras
+## 5. Historial de compras — implementado en `feature/historial-compras`
 
-Consultar qué se compró y cuándo, en una lista que se repite. Es **barato**: D-026 ya guarda las
+Consultar qué se compró y cuándo, en una lista que se repite. Fue **barato**: D-026 ya guardaba las
 lápidas de `list_items` con `removed_at` y `removed_reason` (`'purchased'` frente a `'removed'`),
-literalmente *"para sembrar el historial de V2 sin tabla adicional"*. Los datos ya se acumulan;
-falta una vista de lectura.
+literalmente *"para sembrar el historial de V2 sin tabla adicional"*.
 
-**Toca / preguntas abiertas:**
+**Lo que se hizo:**
 
-- Hoy finalizar una compra **no agrupa los items en una entidad "compra"**: quedan lápidas sueltas
-  con `removed_at` cercanos. Para un historial limpio (y para el total del punto 6) probablemente
-  haga falta un id de compra/lote que se escriba al finalizar.
-- Pantalla o sección nueva: queda fuera de las dos pestañas actuales (Mercado/Catálogo), es una
-  decisión de navegación.
-- Habilita más adelante las sugerencias automáticas ("no compras café hace tres semanas").
+- Finalizar escribe un `purchase_batch_id` (uuid de cliente, D-024) común a todas las lápidas del
+  lote — así el historial agrupa por compra en vez de por `removed_at` cercano. Las lápidas
+  pre-migración sin batch se agrupan por `removed_at` exacto como fallback.
+- Tercera pestaña **Historial** (D-042), pantalla de solo lectura. Se deriva en memoria de
+  `list_items` con `groupPurchaseHistory` (`src/lib/selectors.ts`) — sin quinta consulta persistida.
+- Sin tabla `purchases`: el lote vive en columnas de `list_items` (`purchase_batch_id`,
+  `purchase_total`).
 
-## 6. Total gastado por compra
+Habilita más adelante las sugerencias automáticas ("no compras café hace tres semanas").
+
+## 6. Total gastado por compra — implementado en `feature/historial-compras`
 
 Al finalizar una compra (el drawer de confirmación en `src/routes/mercado-screen.tsx`), un campo
-**opcional** para escribir el **total gastado** en esa compra. Un solo número por compra, no
-precios por producto — así se evita la fricción de captura que dejó "precios" fuera del MVP. En el
-historial (punto 5), cada compra muestra su total, lo que permite llevar cuentas básicas (gasto por
-mes, por supermercado).
+**opcional** para el **total gastado**. Un solo número por compra, no precios por producto. En el
+Historial (punto 5), cada compra muestra su total.
 
-**Toca / preguntas abiertas:**
+**Lo que se hizo:**
 
-- Depende del punto 5 y del id de compra/lote que ese necesita: el total cuelga de la "compra", no
-  de los items.
-- El campo es opcional: finalizar sigue funcionando sin escribir nada (D-001, finalizar no se
-  bloquea).
-- Una sola moneda, la del hogar, sin conversión. ¿Editable después desde el historial?
+- `purchase_total` en la lápida del lote (nullable). El campo es opcional: finalizar sigue
+  funcionando sin escribir nada (D-001, finalizar no se bloquea).
+- Formato de moneda con símbolo fijo antepuesto (`$85.400`), separador de miles, sin decimales
+  (`Intl.NumberFormat('es-CO')`, `src/lib/format.ts`). No hay campo de moneda del hogar.
+
+**Pregunta abierta pendiente:**
+
+- **Total editable desde el Historial.** Hoy el total solo se escribe al finalizar y el Historial es
+  de solo lectura (YAGNI). Editarlo después (corregir una cifra mal tecleada, o añadirla a una
+  compra que se cerró sin total) es la extensión natural.
+
+## 7. Errores legibles para el usuario + seguimiento interno de logs
+
+Hoy algunos fallos enseñan el texto crudo de la excepción al usuario. Un ejemplo real: cuando
+IndexedDB falla al abrir una transacción, llega a pantalla algo como
+`Failed to execute 'transaction' on 'IDBDatabase': ...`. CLAUDE.md ya fija que nada se revierte solo
+y que una mutación en cuarentena se avisa (experiencia_usuario §9); falta que ese aviso esté
+**escrito para una persona**, no volcado desde el motor.
+
+**Toca:**
+
+- Una capa de traducción de errores: del error técnico (excepción de IndexedDB, error de Supabase,
+  fallo de red) a un mensaje en español con el tono de `identidad_visual §8` — qué pasó y qué hacer,
+  sin disculparse, sin jerga. Ej. "No se pudo guardar en este dispositivo. Cierra y vuelve a abrir
+  la app." en vez del `Failed to execute 'transaction'…`.
+- El detalle técnico (stack, mensaje original, contexto) se manda a un **sistema de seguimiento de
+  errores interno** para poder depurar sin pedirle al usuario que lea la consola. La tecnología está
+  por decidir (Sentry u otra); el presupuesto cero (D-018) condiciona la elección.
+- Extiende lo que CLAUDE.md dice sobre la cuarentena de mutaciones: la franja roja tocable
+  (experiencia_usuario §9) muestra el mensaje legible; el reporte interno lleva el resto.
