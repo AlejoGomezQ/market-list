@@ -86,18 +86,17 @@ export function CategoriesSection({ householdId }: { householdId: string }) {
 						key={category.id}
 						className="flex items-center border-b border-border"
 					>
-						{/* ponytail: las flechas de reordenar miden 22px de alto cada una (44px las dos
-						juntas), por debajo del suelo de 44px por control -- es una pantalla de Ajustes
-						de uso ocasional (D-041, "alcance deliberadamente pequeño") y subirlas a 44
-						duplicaría el alto de cada fila de categoría. Revisar en la Fase 5 si el suelo
-						de accesibilidad exige subirlas igual. */}
-						<div className="flex flex-col">
+						{/* Fase 5: las flechas de reordenar iban apiladas a 22px de alto cada una, por
+						debajo del suelo de 44px por control (identidad_visual_v0.1.md §9). Puestas en
+						fila en vez de en columna, cada una llega a 44×44 sin estirar el alto de la fila
+						de categoría. */}
+						<div className="flex">
 							<button
 								type="button"
 								aria-label={`Subir ${category.name}`}
 								disabled={index === 0}
 								onClick={() => mutations.reorder(categories, category.id, "up")}
-								className="flex min-h-[22px] min-w-[var(--min-width-tap)] items-center justify-center text-muted-foreground disabled:opacity-30"
+								className="flex min-h-[var(--min-height-tap)] min-w-[var(--min-width-tap)] items-center justify-center text-muted-foreground disabled:opacity-30"
 							>
 								<ChevronUp
 									aria-hidden="true"
@@ -112,7 +111,7 @@ export function CategoriesSection({ householdId }: { householdId: string }) {
 								onClick={() =>
 									mutations.reorder(categories, category.id, "down")
 								}
-								className="flex min-h-[22px] min-w-[var(--min-width-tap)] items-center justify-center text-muted-foreground disabled:opacity-30"
+								className="flex min-h-[var(--min-height-tap)] min-w-[var(--min-width-tap)] items-center justify-center text-muted-foreground disabled:opacity-30"
 							>
 								<ChevronDown
 									aria-hidden="true"

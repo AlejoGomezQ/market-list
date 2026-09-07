@@ -51,12 +51,24 @@
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		/* Acromáticos — oscuro. Los colores de supermercado y los funcionales no cambian. */
+		/* Acromáticos — oscuro. Los colores de supermercado no cambian (identidad_visual_v0.1.md
+		§2, "idénticos en claro y en oscuro"): son bandas sólidas con texto blanco encima, ajenas
+		al tema. */
 		--paper: #17191a;
 		--ink: #f2f3f3;
 		--ink-mute: #9aa0a3;
 		--ink-ghost: #63696c;
 		--rule: #2c3033;
+
+		/* Fase 5, verificación de contraste: `--destructive` (#A32014) usado como texto sobre
+		`--paper` (mensajes de error, botón "Eliminar") da 2.33:1 sobre el papel oscuro -- no
+		llega ni al umbral de UI (3:1), muy lejos del de texto (4.5:1). Se aclara aquí siguiendo
+		el mismo patrón que `--ink`/`--paper` (que también se invierten juntos): un rojo más claro
+		en oscuro sube a 6.93:1 sobre `--paper` y a ~5:1 sobre el propio fondo entintado del botón
+		destructivo (`bg-destructive/20`). `--color-destructive-foreground` sigue apuntando a
+		`--paper` sin tocarse: como ahora las dos invierten en la misma dirección que ink/paper,
+		el par se mantiene de alto contraste en los dos temas sin un token nuevo. */
+		--destructive: #fa7e67;
 	}
 }
 

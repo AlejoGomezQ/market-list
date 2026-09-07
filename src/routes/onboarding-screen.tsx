@@ -33,6 +33,7 @@ export function OnboardingScreen() {
 	const [step, setStep] = useState<Step>({ kind: "choice" });
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [codeCopied, setCodeCopied] = useState(false);
 
 	async function finishLinking(household: {
 		householdId: string;
@@ -195,16 +196,19 @@ export function OnboardingScreen() {
 						para recuperar el acceso si reinstalas la app. Lo encuentras siempre
 						en Ajustes.
 					</p>
-					<div className="flex items-center justify-between border border-border px-4 py-3">
+					<div className="flex flex-wrap items-center justify-between gap-2 border border-border px-4 py-3">
 						<span className="text-20 font-bold tracking-widest">
 							{step.joinCode}
 						</span>
 						<Button
 							type="button"
 							variant="outline"
-							onClick={() => navigator.clipboard?.writeText(step.joinCode)}
+							onClick={() => {
+								navigator.clipboard?.writeText(step.joinCode);
+								setCodeCopied(true);
+							}}
 						>
-							Copiar
+							{codeCopied ? "Copiado" : "Copiar"}
 						</Button>
 					</div>
 					<Button

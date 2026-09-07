@@ -71,7 +71,7 @@ export function AjustesDrawer() {
 						</div>
 						<div>
 							<p className="text-13 text-muted-foreground">Código</p>
-							<div className="mt-1 flex items-center justify-between border border-border px-4 py-3">
+							<div className="mt-1 flex flex-wrap items-center justify-between gap-2 border border-border px-4 py-3">
 								<span className="text-20 font-bold tracking-widest">
 									{link?.joinCode}
 								</span>
