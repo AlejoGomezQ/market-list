@@ -283,11 +283,16 @@ export function MercadoScreen() {
 
 			<div className="flex-1 overflow-y-auto pb-28">
 				{sections.length === 0 ? (
-					<div className="px-4 text-14 text-muted-foreground">
-						<p>Nada que comprar ahora mismo.</p>
+					<div className="flex flex-col items-center gap-3 px-8 pt-24 text-center">
+						{/* Una invitación, no un lamento (identidad_visual §8): se le da presencia con
+						la anchura condensada pesada del rótulo -- sin mayúsculas, reservadas a la
+						señalización de supermercado (§3) -- centrada y con aire. */}
+						<p className="text-20 font-bold tracking-[var(--tracking-label)] text-foreground wdth-75">
+							Nada que comprar ahora mismo.
+						</p>
 						<Link
 							to="/catalogo"
-							className="mt-1 inline-block underline underline-offset-2"
+							className="text-14 text-muted-foreground underline underline-offset-4"
 						>
 							Ir al catálogo
 						</Link>

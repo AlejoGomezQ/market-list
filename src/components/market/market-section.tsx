@@ -50,31 +50,41 @@ export function MarketSection({
 
 	return (
 		<div>
+			{/* La banda es el elemento memorable de la app (identidad_visual §4): franja a sangre
+			completa, color sólido del supermercado, rótulo condensado pesado en blanco y contador
+			a la derecha. Se queda pegada arriba mientras se recorre su sección -- el cartel del
+			pasillo. "Sin asignar" va sin color (bg-rule), "es la ausencia de sitio" (§2). */}
 			<button
 				type="button"
 				onClick={onToggleCollapse}
 				aria-expanded={!collapsed}
-				className="flex min-h-[var(--min-height-tap)] w-full items-center justify-between border-b border-border px-4"
+				className={cn(
+					"sticky top-0 z-10 flex min-h-[var(--min-height-tap)] w-full items-center justify-between px-4",
+					supermarket
+						? supermarketColorClass(supermarket.position)
+						: "bg-[var(--rule)]",
+				)}
 			>
-				<span className="flex items-center gap-2 text-13 font-bold tracking-[var(--tracking-label)] wdth-75">
-					{supermarket && (
-						<span
-							aria-hidden="true"
-							className={cn(
-								"size-2.5 rounded-full",
-								supermarketColorClass(supermarket.position),
-							)}
-						/>
+				<span
+					className={cn(
+						"text-20 font-bold uppercase tracking-[var(--tracking-label)] wdth-75",
+						supermarket ? "text-white" : "text-muted-foreground",
 					)}
-					<span className="uppercase">{name}</span>
+				>
+					{name}
 				</span>
-				<span className="flex items-center gap-2 text-13 text-muted-foreground">
+				<span
+					className={cn(
+						"flex items-center gap-2.5 text-14 tabular-nums",
+						supermarket ? "text-white/85" : "text-muted-foreground",
+					)}
+				>
 					{pending.length} de {entries.length}
 					<ChevronDown
 						aria-hidden="true"
 						strokeWidth={1.75}
 						className={cn(
-							"size-4 transition-transform",
+							"size-[18px] transition-transform",
 							collapsed && "-rotate-90",
 						)}
 					/>
@@ -99,7 +109,7 @@ export function MarketSection({
 						{pending.length > 0 && checked.length > 0 && (
 							<div
 								aria-hidden="true"
-								className="border-t border-dashed border-border"
+								className="my-2 border-t border-dashed border-border"
 							/>
 						)}
 						{checked.map((entry) => (
@@ -160,9 +170,14 @@ function MarketRow({
 		// estándar de la activación de <label>).
 		<label
 			data-row-id={item.id}
-			// Toda la fila marca (CLAUDE.md, experiencia_usuario §4/§8): 44px mínimo, la fila entera
-			// es la zona de toque, no la casilla.
-			className="flex min-h-[var(--min-height-tap)] cursor-pointer items-center gap-3 border-b border-border px-4"
+			// Toda la fila marca (CLAUDE.md, experiencia_usuario §4/§8): la fila entera es la zona
+			// de toque, no la casilla. Las filas se separan por aire, no por bordes (identidad_visual
+			// §4): franjas altas (54px pendientes, 50px compradas), sin `border-b`. Ambas superan el
+			// mínimo de 44px de toque.
+			className={cn(
+				"flex cursor-pointer items-center gap-3 px-4",
+				item.checked ? "min-h-[50px]" : "min-h-[54px]",
+			)}
 		>
 			<input
 				type="checkbox"
