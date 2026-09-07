@@ -134,18 +134,33 @@ export function CatalogoScreen() {
 
 			<div className="flex-1 overflow-y-auto pb-24">
 				{liveProducts.length === 0 ? (
-					<p className="px-4 text-14 text-muted-foreground">
+					<p className="px-8 pt-16 text-center text-20 font-bold text-foreground wdth-75">
 						Añade lo que sueles comprar.
 					</p>
 				) : sections.length === 0 ? (
-					<p className="px-4 text-14 text-muted-foreground">
+					<p className="px-4 pt-4 text-14 text-muted-foreground">
 						Nada coincide con "{search}".
 					</p>
 				) : (
 					sections.map((section) => (
 						<div key={section.supermarket?.id ?? "sin-asignar"}>
-							<h2 className="px-4 py-2 text-13 font-bold tracking-[var(--tracking-label)] text-muted-foreground wdth-75">
-								{(section.supermarket?.name ?? "Sin asignar").toUpperCase()}
+							{/* Banda de supermercado: el elemento memorable de la app (identidad_visual §4).
+							Sangre completa, color sólido del supermercado con el rótulo en blanco
+							condensado pesado, y pegada arriba al desplazar -- el cartel del pasillo.
+							"Sin asignar" no tiene color: gris `--rule`, que es la ausencia de sitio
+							(§2). En el Catálogo la banda es solo rótulo: no se pliega ni lleva cuenta. */}
+							<h2
+								className={cn(
+									"sticky top-0 z-10 flex h-11 items-center px-4 text-20 font-bold uppercase tracking-[var(--tracking-label)] wdth-75",
+									section.supermarket
+										? cn(
+												supermarketColorClass(section.supermarket.position),
+												"text-white",
+											)
+										: "bg-border text-muted-foreground",
+								)}
+							>
+								{section.supermarket?.name ?? "Sin asignar"}
 							</h2>
 							{section.products.map((product) => {
 								const activeItem =
@@ -153,7 +168,7 @@ export function CatalogoScreen() {
 								return (
 									<div
 										key={product.id}
-										className="relative flex min-h-[var(--min-height-tap)] items-center border-b border-border pl-4"
+										className="relative flex min-h-[54px] items-center pl-4"
 									>
 										{/* Producto ya en la lista de mercado (RN-002): una barra a la izquierda
 										para leerlo de un vistazo, con el color del supermercado de la sección
@@ -216,9 +231,9 @@ export function CatalogoScreen() {
 				type="button"
 				aria-label="Nuevo producto"
 				onClick={() => setDrawer({ mode: "create" })}
-				className="fixed bottom-[calc(var(--min-height-tap)+env(safe-area-inset-bottom,0px)+16px)] right-4 flex size-12 items-center justify-center rounded-[var(--radius-control)] bg-primary text-primary-foreground"
+				className="fixed bottom-[calc(var(--min-height-tap)+env(safe-area-inset-bottom,0px)+16px)] right-4 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground"
 			>
-				<Plus aria-hidden="true" className="size-6" strokeWidth={1.75} />
+				<Plus aria-hidden="true" className="size-[26px]" strokeWidth={1.75} />
 			</button>
 
 			<ProductDrawer
