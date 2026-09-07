@@ -60,6 +60,12 @@ jobs:
           echo "VITE_SUPABASE_URL=$(echo "$STATUS" | grep '^API_URL=' | cut -d'"' -f2)" >> "$GITHUB_ENV"
           echo "VITE_SUPABASE_ANON_KEY=$(echo "$STATUS" | grep '^ANON_KEY=' | cut -d'"' -f2)" >> "$GITHUB_ENV"
 
+      # Batería de integración de Fase 1 (C-001..C-007, sync_push, create/join/leave_household)
+      # contra el Postgres de `supabase start`. `db.ts` usa por defecto la cadena de conexión local
+      # (postgresql://postgres:postgres@127.0.0.1:54322/postgres), así que no necesita más config.
+      - name: Tests de integración
+        run: pnpm run test:integration
+
       - name: Instalar navegador de Playwright (WebKit de escritorio)
         run: pnpm exec playwright install --with-deps webkit
 
