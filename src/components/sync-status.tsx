@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 /**
  * Indicador de estado de sincronización (D-012, estrategia_sincronizacion §9). Dos formas, no una:
  *
- * - "Al día" / "Subiendo" / "Sin conexión" son una línea discreta bajo el título -- "sin ruido, sin
- *   animaciones" (§9), y el color solo aparece para "sin conexión" (`--alert`, identidad_visual
+ * - "Todo guardado" / "Guardando cambios…" / "Sin conexión" son una línea discreta bajo el título --
+ *   "sin ruido, sin animaciones" (§9), y el color solo aparece para "sin conexión" (`--alert`, identidad_visual
  *   §2: "sin conexión, cambios pendientes" es literalmente su descripción de uso).
  * - "Cambios en cuarentena" es la excepción explícita: "una franja única con el número y una
  *   acción de copiar el detalle", no una línea más. Manda sobre los otros tres estados.
@@ -67,8 +67,8 @@ export function SyncStatusIndicator({
 		status.kind === "offline"
 			? `Sin conexión · ${status.pendingCount} ${status.pendingCount === 1 ? "pendiente" : "pendientes"}`
 			: status.kind === "uploading"
-				? "Subiendo"
-				: "Al día";
+				? "Guardando cambios…"
+				: "Todo guardado";
 
 	return (
 		<p
