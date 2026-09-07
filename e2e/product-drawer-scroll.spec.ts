@@ -26,6 +26,9 @@ test("con 'Marca y categoría' expandido, 'Guardar' sigue dentro del viewport si
 	).toBeVisible();
 	await page.getByRole("button", { name: "Continuar" }).click();
 
+	// Paso de onboarding de supermercados (f9a710a), saltable: aquí no hacen falta.
+	await page.getByRole("button", { name: "Ahora no" }).click();
+
 	await page.getByRole("link", { name: "Catálogo", exact: true }).click();
 	await page.getByRole("button", { name: "Nuevo producto" }).click();
 

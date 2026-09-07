@@ -28,6 +28,10 @@ test("crear hogar, dar de alta un producto, agregarlo al mercado, marcarlo y fin
 	).toBeVisible();
 	await page.getByRole("button", { name: "Continuar" }).click();
 
+	// Paso de onboarding solo para quien crea el hogar (f9a710a): elegir supermercados.
+	// Es saltable y este escenario no los necesita (el producto queda en "Sin asignar").
+	await page.getByRole("button", { name: "Ahora no" }).click();
+
 	// D-033: Mercado es la pantalla de arranque, vacía todavía (RN, "estado de éxito").
 	await expect(page.getByRole("heading", { name: "Mercado" })).toBeVisible();
 	await expect(page.getByText("Nada que comprar ahora mismo.")).toBeVisible();
