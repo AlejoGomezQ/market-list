@@ -1,5 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { CategoriesSection } from "@/components/settings/categories-section";
+import { SupermarketsSection } from "@/components/settings/supermarkets-section";
 import { Button } from "@/components/ui/button";
 import {
 	Drawer,
@@ -62,7 +64,7 @@ export function AjustesDrawer() {
 					<DrawerHeader>
 						<DrawerTitle>Ajustes</DrawerTitle>
 					</DrawerHeader>
-					<div className="flex flex-col gap-4 px-4 pb-6">
+					<div className="flex flex-col gap-4 overflow-y-auto px-4 pb-6">
 						<div>
 							<p className="text-13 text-muted-foreground">Hogar</p>
 							<p className="text-17 font-medium">{link?.name}</p>
@@ -93,6 +95,17 @@ export function AjustesDrawer() {
 						>
 							Regenerar código
 						</Button>
+
+						{link && (
+							<>
+								<div className="border-t border-border pt-4">
+									<SupermarketsSection householdId={link.householdId} />
+								</div>
+								<div className="border-t border-border pt-4">
+									<CategoriesSection householdId={link.householdId} />
+								</div>
+							</>
+						)}
 					</div>
 				</DrawerContent>
 			</Drawer>

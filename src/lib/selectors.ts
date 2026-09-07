@@ -67,7 +67,14 @@ export function groupMarketListBySupermarket(
 	const liveSupermarketById = new Map(
 		supermarkets.filter((s) => s.deleted_at === null).map((s) => [s.id, s]),
 	);
-	const categoryPosition = new Map(categories.map((c) => [c.id, c.position]));
+	// Igual que con el supermercado borrado (§4.3): una categoría borrada no debe congelar su
+	// posición para siempre. Un producto que apuntaba a ella cae al final del grupo, como si no
+	// tuviera categoría, en vez de ordenarse por una posición fantasma.
+	const categoryPosition = new Map(
+		categories
+			.filter((c) => c.deleted_at === null)
+			.map((c) => [c.id, c.position]),
+	);
 
 	const bySupermarket = new Map<
 		string | null,
@@ -120,4 +127,129 @@ export function groupMarketListBySupermarket(
 		});
 
 	return sections;
+}
+
+export interface CatalogSection {
+	/** `null` es el grupo "Sin asignar" (D-002). */
+	supermarket: Supermarket | null;
+	products: Product[];
+}
+
+/**
+ * Agrupa el catálogo completo por supermercado (experiencia_usuario §5), con el mismo criterio de
+ * pintado que el Mercado (§4.3 de la arquitectura): un producto sin supermercado, o cuyo
+ * supermercado está borrado, cae en "Sin asignar". A diferencia de `groupMarketListBySupermarket`
+ * entra todo el catálogo vivo, no solo lo que está en la lista de mercado, y el orden dentro de
+ * cada grupo es alfabético: aquí no se recorre un pasillo, se busca un nombre.
+ */
+export function groupProductsBySupermarket(
+	products: Product[],
+	supermarkets: Supermarket[],
+): CatalogSection[] {
+	const liveSupermarketById = new Map(
+		supermarkets.filter((s) => s.deleted_at === null).map((s) => [s.id, s]),
+	);
+	const bySupermarket = new Map<string | null, Product[]>();
+
+	for (const product of products) {
+		if (product.deleted_at !== null) continue;
+		const supermarketId =
+			product.supermarket_id && liveSupermarketById.has(product.supermarket_id)
+				? product.supermarket_id
+				: null;
+		const list = bySupermarket.get(supermarketId) ?? [];
+		list.push(product);
+		bySupermarket.set(supermarketId, list);
+	}
+
+	const byName = (a: Product, b: Product) => a.name.localeCompare(b.name, "es");
+
+	const orderedSupermarkets = [...supermarkets]
+		.filter((s) => s.deleted_at === null)
+		.sort(
+			(a, b) =>
+				a.position - b.position || a.created_at.localeCompare(b.created_at),
+		);
+
+	const sections: CatalogSection[] = [];
+	for (const supermarket of orderedSupermarkets) {
+		const list = bySupermarket.get(supermarket.id);
+		if (list) sections.push({ supermarket, products: list.sort(byName) });
+	}
+	const unassigned = bySupermarket.get(null);
+	if (unassigned)
+		sections.push({ supermarket: null, products: unassigned.sort(byName) });
+
+	return sections;
+}
+
+/** Siguiente `position` libre al dar de alta una fila en una tabla ordenable (supermercados,
+ * categorías): el máximo actual más uno, o 0 si la tabla está vacía. */
+export function nextPosition(rows: Array<{ position: number }>): number {
+	return rows.length === 0
+		? 0
+		: Math.max(...rows.map((row) => row.position)) + 1;
+}
+
+/**
+ * Paleta cerrada de ocho (identidad_visual_v0.1.md #2, D-036). No hay columna `color` en el
+ * dominio (arquitectura §2.2): el color se deriva de `position` en el momento de pintar, no se
+ * guarda. Así cada supermercado conserva su color aunque se borren otros -- "se asignan por orden
+ * al crear" (D-036) sin que la paleta se reordene sola -- y con más de ocho supermercados la
+ * paleta simplemente se repite en vez de fallar.
+ */
+const SUPERMARKET_COLOR_CLASSES = [
+	"bg-market-rojo",
+	"bg-market-cobalto",
+	"bg-market-bosque",
+	"bg-market-ocre",
+	"bg-market-ciruela",
+	"bg-market-turquesa",
+	"bg-market-pizarra",
+	"bg-market-naranja",
+] as const;
+
+export function supermarketColorClass(position: number): string {
+	const length = SUPERMARKET_COLOR_CLASSES.length;
+	const index = ((position % length) + length) % length;
+	return SUPERMARKET_COLOR_CLASSES[index];
+}
+
+/** Normaliza un nombre para compararlo: sin espacios sobrantes, minúsculas y sin tildes. */
+function normalizeProductName(name: string): string {
+	return name
+		.trim()
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * Detecta si `name` se parece a un producto ya existente en el catálogo (D-006, RF-001): avisa,
+ * no bloquea, para que el catálogo no degenere en "Leche" / "leche" / "Leche Alpina". Dos nombres
+ * cuentan como parecidos si, normalizados, son iguales o uno contiene enteramente al otro (cubre
+ * "Leche" ⊂ "Leche Alpina"); se exige un mínimo de tres caracteres en el más corto para no marcar
+ * como parecido cualquier nombre de dos letras. Ignora productos borrados y, en edición, al propio
+ * producto que se está editando (`excludeId`).
+ */
+export function findSimilarProduct(
+	products: Product[],
+	name: string,
+	excludeId?: string,
+): Product | null {
+	const normalized = normalizeProductName(name);
+	if (normalized.length < 3) return null;
+	for (const product of products) {
+		if (product.deleted_at !== null || product.id === excludeId) continue;
+		const candidate = normalizeProductName(product.name);
+		if (candidate.length < 3) continue;
+		if (
+			candidate === normalized ||
+			candidate.includes(normalized) ||
+			normalized.includes(candidate)
+		) {
+			return product;
+		}
+	}
+	return null;
 }

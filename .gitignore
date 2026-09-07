@@ -30,6 +30,11 @@ Thumbs.db
 # Cobertura de tests
 coverage/
 
+# Export manual de los datos del hogar (D-023, "hace falta un export periódico de los datos del
+# hogar"; plan_implementacion Fase 3). `pnpm export:data` los escribe aquí -- son datos reales del
+# hogar, nunca van al repo público.
+backups/
+
 # Cache de herramientas
 .eslintcache
 *.tsbuildinfo

@@ -13,7 +13,8 @@
 		"test": "vitest run",
 		"test:integration": "vitest run --config vitest.integration.config.ts",
 		"test:watch": "vitest",
-		"gen:types": "supabase gen types typescript --local > src/types/database.ts"
+		"gen:types": "supabase gen types typescript --local > src/types/database.ts",
+		"export:data": "supabase db dump --data-only --linked -f backups/household-data.sql"
 	},
 	"dependencies": {
 		"@supabase/supabase-js": "^2.115.0",

@@ -6,9 +6,13 @@ import type {
 	Supermarket,
 } from "@/schemas/domain";
 import {
+	findSimilarProduct,
 	groupMarketListBySupermarket,
+	groupProductsBySupermarket,
 	indexActiveListItemsByProduct,
+	nextPosition,
 	searchProducts,
+	supermarketColorClass,
 } from "./selectors";
 
 const ts = "2026-09-06T10:00:00.000Z";
@@ -235,5 +239,132 @@ describe("groupMarketListBySupermarket", () => {
 			"Con categoría",
 			"Sin categoría",
 		]);
+	});
+
+	it("treats a product pointing to a deleted category as uncategorized, not frozen in place", () => {
+		const supermarkets = [supermarket({ id: "sm-1" })];
+		const categories = [
+			category({ id: "cat-live", name: "Lácteos", position: 0 }),
+			category({
+				id: "cat-deleted",
+				name: "Vieja",
+				position: 1,
+				deleted_at: ts,
+			}),
+		];
+		const products = [
+			product({
+				id: "p-deleted-cat",
+				name: "Azúcar",
+				category_id: "cat-deleted",
+				supermarket_id: "sm-1",
+			}),
+			product({
+				id: "p-cat",
+				name: "Leche",
+				category_id: "cat-live",
+				supermarket_id: "sm-1",
+			}),
+		];
+		const listItems = [
+			listItem({ id: "li-1", product_id: "p-deleted-cat" }),
+			listItem({ id: "li-2", product_id: "p-cat" }),
+		];
+
+		const sections = groupMarketListBySupermarket(
+			listItems,
+			products,
+			supermarkets,
+			categories,
+		);
+
+		expect(sections[0].entries.map((e) => e.product.name)).toEqual([
+			"Leche",
+			"Azúcar",
+		]);
+	});
+});
+
+describe("groupProductsBySupermarket", () => {
+	it("groups the whole live catalog alphabetically within each supermarket (experiencia_usuario §5)", () => {
+		const supermarkets = [supermarket({ id: "sm-1", position: 0 })];
+		const products = [
+			product({ id: "p-1", name: "Yogur", supermarket_id: "sm-1" }),
+			product({ id: "p-2", name: "Arroz", supermarket_id: "sm-1" }),
+		];
+		const sections = groupProductsBySupermarket(products, supermarkets);
+		expect(sections).toHaveLength(1);
+		expect(sections[0].products.map((p) => p.name)).toEqual(["Arroz", "Yogur"]);
+	});
+
+	it('puts products without a supermarket, or with a deleted one, in "Sin asignar" (D-002)', () => {
+		const supermarkets = [supermarket({ id: "sm-deleted", deleted_at: ts })];
+		const products = [
+			product({ id: "p-none", name: "Sal", supermarket_id: null }),
+			product({
+				id: "p-deleted-sm",
+				name: "Azúcar",
+				supermarket_id: "sm-deleted",
+			}),
+		];
+		const sections = groupProductsBySupermarket(products, supermarkets);
+		expect(sections).toHaveLength(1);
+		expect(sections[0].supermarket).toBeNull();
+	});
+
+	it("excludes deleted products entirely (RF-003)", () => {
+		const products = [product({ id: "p-gone", deleted_at: ts })];
+		expect(groupProductsBySupermarket(products, [])).toHaveLength(0);
+	});
+});
+
+describe("nextPosition", () => {
+	it("is 0 for an empty table", () => {
+		expect(nextPosition([])).toBe(0);
+	});
+
+	it("is one past the current maximum", () => {
+		expect(nextPosition([{ position: 0 }, { position: 3 }])).toBe(4);
+	});
+});
+
+describe("supermarketColorClass", () => {
+	it("assigns colors in the order supermarkets were created (D-036)", () => {
+		expect(supermarketColorClass(0)).toBe("bg-market-rojo");
+		expect(supermarketColorClass(1)).toBe("bg-market-cobalto");
+	});
+
+	it("cycles the closed eight-color palette instead of failing past the eighth supermarket", () => {
+		expect(supermarketColorClass(8)).toBe(supermarketColorClass(0));
+		expect(supermarketColorClass(9)).toBe(supermarketColorClass(1));
+	});
+});
+
+describe("findSimilarProduct", () => {
+	const products = [
+		product({ id: "p-leche", name: "Leche" }),
+		product({ id: "p-pan", name: "Pan tajado" }),
+		product({ id: "p-gone", name: "Queso", deleted_at: ts }),
+	];
+
+	it("flags an exact match after normalizing case and accents (D-006)", () => {
+		expect(findSimilarProduct(products, "leche")?.id).toBe("p-leche");
+		expect(findSimilarProduct(products, "LECHE")?.id).toBe("p-leche");
+	});
+
+	it("flags a name that contains an existing one, e.g. adding a brand", () => {
+		expect(findSimilarProduct(products, "Leche Alpina")?.id).toBe("p-leche");
+	});
+
+	it("excludes the product being edited", () => {
+		expect(findSimilarProduct(products, "Leche", "p-leche")).toBeNull();
+	});
+
+	it("ignores deleted products", () => {
+		expect(findSimilarProduct(products, "Queso")).toBeNull();
+	});
+
+	it("doesn't flag unrelated short names", () => {
+		expect(findSimilarProduct(products, "Sal")).toBeNull();
 	});
 });
