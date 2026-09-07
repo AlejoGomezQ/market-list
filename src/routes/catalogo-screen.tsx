@@ -82,15 +82,12 @@ export function CatalogoScreen() {
 		queryClient,
 	);
 
-	function handleCreate(
-		input: {
-			name: string;
-			brand: string | null;
-			categoryId: string | null;
-			supermarketId: string | null;
-		},
-		_andAnother: boolean,
-	) {
+	function handleCreate(input: {
+		name: string;
+		brand: string | null;
+		categoryId: string | null;
+		supermarketId: string | null;
+	}) {
 		productMutations.create(input);
 	}
 
@@ -209,6 +206,8 @@ export function CatalogoScreen() {
 				onOpenChange={(open) => {
 					if (!open) setDrawer(null);
 				}}
+				householdId={householdId ?? ""}
+				queryClient={queryClient}
 				supermarkets={supermarkets}
 				categories={categories}
 				products={products}

@@ -1,8 +1,10 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Drawer,
+	DrawerBody,
 	DrawerContent,
 	DrawerDescription,
 	DrawerFooter,
@@ -10,7 +12,12 @@ import {
 	DrawerTitle,
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
-import { findSimilarProduct } from "@/lib/selectors";
+import { useSupermarketMutations } from "@/lib/mutations/supermarkets";
+import {
+	findSimilarProduct,
+	nextPosition,
+	supermarketColorClass,
+} from "@/lib/selectors";
 import { cn } from "@/lib/utils";
 import type {
 	Category,
@@ -39,11 +46,13 @@ type EditableProductFields = Partial<
 interface ProductDrawerProps {
 	state: ProductDrawerState | null;
 	onOpenChange: (open: boolean) => void;
+	householdId: string;
+	queryClient: QueryClient;
 	supermarkets: Supermarket[];
 	categories: Category[];
 	products: Product[];
 	activeListItem: ListItem | null;
-	onCreate: (input: NewProductFormInput, andAnother: boolean) => void;
+	onCreate: (input: NewProductFormInput) => void;
 	onUpdate: (fields: EditableProductFields) => void;
 	onDelete: () => void;
 	onGoToSimilar: (product: Product) => void;
@@ -84,6 +93,8 @@ export function ProductDrawer({
 function ProductForm({
 	mode,
 	product,
+	householdId,
+	queryClient,
 	supermarkets,
 	categories,
 	products,
@@ -111,7 +122,16 @@ function ProductForm({
 	);
 	const [error, setError] = useState<string | null>(null);
 	const [confirmDelete, setConfirmDelete] = useState(false);
-	const nameInputRef = useRef<HTMLInputElement>(null);
+
+	const supermarketMutations = useSupermarketMutations(
+		householdId,
+		queryClient,
+	);
+	const [newSupermarketOpen, setNewSupermarketOpen] = useState(false);
+	const [newSupermarketName, setNewSupermarketName] = useState("");
+	const [newSupermarketError, setNewSupermarketError] = useState<string | null>(
+		null,
+	);
 
 	const liveSupermarkets = supermarkets
 		.filter((s) => s.deleted_at === null)
@@ -132,20 +152,7 @@ function ProductForm({
 			"Sin asignar")
 		: null;
 
-	function resetForAnother() {
-		setName("");
-		setBrand("");
-		setCategoryId(null);
-		// El supermercado se conserva: al dar de alta varios de un tirón (D-006/experiencia_usuario
-		// §6, "sesenta productos de un tirón") suele ser el mismo pasillo/tienda.
-		setError(null);
-		// "Guardar y otro" solo gana su sitio si el siguiente nombre se puede escribir sin volver a
-		// tocar la pantalla (experiencia_usuario §6): re-enfocar es lo que hace posible dar de alta
-		// varios seguidos sin un toque extra por producto.
-		nameInputRef.current?.focus();
-	}
-
-	function handleSave(andAnother: boolean) {
+	function handleSave() {
 		const parsed = nameFieldSchema.safeParse(name);
 		if (!parsed.success) {
 			setError(parsed.error.issues[0]?.message ?? "Nombre inválido.");
@@ -155,19 +162,12 @@ function ProductForm({
 		const normalizedBrand = trimmedBrand.length > 0 ? trimmedBrand : null;
 
 		if (mode === "create") {
-			onCreate(
-				{
-					name: parsed.data,
-					brand: normalizedBrand,
-					categoryId,
-					supermarketId,
-				},
-				andAnother,
-			);
-			if (andAnother) {
-				resetForAnother();
-				return;
-			}
+			onCreate({
+				name: parsed.data,
+				brand: normalizedBrand,
+				categoryId,
+				supermarketId,
+			});
 			onClose();
 			return;
 		}
@@ -183,6 +183,24 @@ function ProductForm({
 		onClose();
 	}
 
+	function handleCreateSupermarket() {
+		const parsed = nameFieldSchema.safeParse(newSupermarketName);
+		if (!parsed.success) {
+			setNewSupermarketError(
+				parsed.error.issues[0]?.message ?? "Nombre inválido.",
+			);
+			return;
+		}
+		const created = supermarketMutations.create(
+			parsed.data,
+			nextPosition(liveSupermarkets),
+		);
+		setSupermarketId(created.id);
+		setNewSupermarketName("");
+		setNewSupermarketError(null);
+		setNewSupermarketOpen(false);
+	}
+
 	return (
 		<>
 			<DrawerHeader>
@@ -190,7 +208,7 @@ function ProductForm({
 					{mode === "create" ? "Nuevo producto" : "Editar producto"}
 				</DrawerTitle>
 			</DrawerHeader>
-			<div className="flex flex-col gap-4 px-4 pb-6">
+			<DrawerBody>
 				<div className="flex flex-col gap-1.5">
 					<label
 						htmlFor="product-name"
@@ -200,7 +218,6 @@ function ProductForm({
 					</label>
 					<Input
 						id="product-name"
-						ref={nameInputRef}
 						autoFocus
 						value={name}
 						onChange={(event) => {
@@ -230,7 +247,27 @@ function ProductForm({
 
 				<div className="flex flex-col gap-1.5">
 					<span className="text-13 text-muted-foreground">Supermercado</span>
+					{liveSupermarkets.length === 0 && (
+						<p className="text-14 text-muted-foreground">
+							Aún no has añadido supermercados.
+						</p>
+					)}
 					<div className="flex flex-wrap gap-2">
+						{liveSupermarkets.length > 0 && (
+							<button
+								type="button"
+								aria-pressed={supermarketId === null}
+								onClick={() => setSupermarketId(null)}
+								className={cn(
+									"min-h-[var(--min-height-tap)] rounded-[var(--radius-control)] px-3 text-14",
+									supermarketId === null
+										? "bg-accent text-foreground"
+										: "text-muted-foreground",
+								)}
+							>
+								Sin asignar
+							</button>
+						)}
 						{liveSupermarkets.map((supermarket) => (
 							<button
 								key={supermarket.id}
@@ -238,27 +275,33 @@ function ProductForm({
 								aria-pressed={supermarketId === supermarket.id}
 								onClick={() => setSupermarketId(supermarket.id)}
 								className={cn(
-									"min-h-[var(--min-height-tap)] rounded-[var(--radius-control)] border px-3 text-14",
+									"inline-flex min-h-[var(--min-height-tap)] items-center gap-1.5 rounded-[var(--radius-control)] border px-3 text-14",
 									supermarketId === supermarket.id
 										? "border-foreground bg-foreground text-background"
 										: "border-border text-foreground",
 								)}
 							>
+								<span
+									aria-hidden="true"
+									className={cn(
+										"size-2.5 shrink-0 rounded-full",
+										supermarketColorClass(supermarket.position),
+									)}
+								/>
 								{supermarket.name}
 							</button>
 						))}
 						<button
 							type="button"
-							aria-pressed={supermarketId === null}
-							onClick={() => setSupermarketId(null)}
-							className={cn(
-								"min-h-[var(--min-height-tap)] rounded-[var(--radius-control)] border px-3 text-14",
-								supermarketId === null
-									? "border-foreground bg-foreground text-background"
-									: "border-border text-muted-foreground",
-							)}
+							onClick={() => {
+								setNewSupermarketName("");
+								setNewSupermarketError(null);
+								setNewSupermarketOpen(true);
+							}}
+							className="inline-flex min-h-[var(--min-height-tap)] items-center gap-1 rounded-[var(--radius-control)] border border-border border-dashed px-3 text-14 text-muted-foreground"
 						>
-							Sin asignar
+							<Plus aria-hidden="true" className="size-4" strokeWidth={1.75} />
+							Nuevo supermercado
 						</button>
 					</div>
 				</div>
@@ -311,27 +354,16 @@ function ProductForm({
 						</div>
 					</div>
 				)}
+			</DrawerBody>
 
-				<div className="flex gap-2">
-					<Button
-						type="button"
-						className="min-h-[var(--min-height-tap)] flex-1"
-						onClick={() => handleSave(false)}
-					>
-						Guardar
-					</Button>
-					{mode === "create" && (
-						<Button
-							type="button"
-							variant="outline"
-							className="min-h-[var(--min-height-tap)] flex-1"
-							onClick={() => handleSave(true)}
-						>
-							Guardar y otro
-						</Button>
-					)}
-				</div>
-
+			<DrawerFooter>
+				<Button
+					type="button"
+					className="min-h-[var(--min-height-tap)] w-full"
+					onClick={handleSave}
+				>
+					Guardar
+				</Button>
 				{mode === "edit" && (
 					<Button
 						type="button"
@@ -343,7 +375,40 @@ function ProductForm({
 						Eliminar
 					</Button>
 				)}
-			</div>
+			</DrawerFooter>
+
+			<Drawer open={newSupermarketOpen} onOpenChange={setNewSupermarketOpen}>
+				<DrawerContent>
+					<DrawerHeader>
+						<DrawerTitle>Nuevo supermercado</DrawerTitle>
+					</DrawerHeader>
+					<DrawerBody className="gap-3">
+						<Input
+							autoFocus
+							value={newSupermarketName}
+							onChange={(event) => {
+								setNewSupermarketName(event.target.value);
+								setNewSupermarketError(null);
+							}}
+							placeholder="Nombre del supermercado"
+						/>
+						{newSupermarketError && (
+							<p role="alert" className="text-14 text-destructive">
+								{newSupermarketError}
+							</p>
+						)}
+					</DrawerBody>
+					<DrawerFooter>
+						<Button
+							type="button"
+							className="min-h-[var(--min-height-tap)] w-full"
+							onClick={handleCreateSupermarket}
+						>
+							Guardar
+						</Button>
+					</DrawerFooter>
+				</DrawerContent>
+			</Drawer>
 
 			<Drawer open={confirmDelete} onOpenChange={setConfirmDelete}>
 				<DrawerContent>

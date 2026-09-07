@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Drawer,
+	DrawerBody,
 	DrawerContent,
 	DrawerDescription,
 	DrawerFooter,
@@ -161,7 +162,7 @@ export function CategoriesSection({ householdId }: { householdId: string }) {
 							{editing === "new" ? "Nueva categoría" : "Renombrar categoría"}
 						</DrawerTitle>
 					</DrawerHeader>
-					<div className="flex flex-col gap-3 px-4 pb-6">
+					<DrawerBody className="gap-3">
 						<Input
 							autoFocus
 							value={name}
@@ -176,6 +177,8 @@ export function CategoriesSection({ householdId }: { householdId: string }) {
 								{error}
 							</p>
 						)}
+					</DrawerBody>
+					<DrawerFooter>
 						<Button
 							type="button"
 							onClick={save}
@@ -183,7 +186,7 @@ export function CategoriesSection({ householdId }: { householdId: string }) {
 						>
 							Guardar
 						</Button>
-					</div>
+					</DrawerFooter>
 				</DrawerContent>
 			</Drawer>
 

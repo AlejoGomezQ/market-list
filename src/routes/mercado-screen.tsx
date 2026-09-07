@@ -7,6 +7,7 @@ import { SyncStatusIndicator } from "@/components/sync-status";
 import { Button } from "@/components/ui/button";
 import {
 	Drawer,
+	DrawerBody,
 	DrawerContent,
 	DrawerFooter,
 	DrawerHeader,
@@ -345,7 +346,7 @@ export function MercadoScreen() {
 									Finalizar compra en {finalizeConfirm.supermarketName}
 								</DrawerTitle>
 							</DrawerHeader>
-							<div className="flex flex-col gap-2 px-4 pb-2">
+							<DrawerBody className="gap-2">
 								<div className="flex items-center justify-between text-14 text-foreground">
 									<span>Saldrán de la lista</span>
 									<span>{finalizeConfirm.itemIds.length} productos</span>
@@ -357,7 +358,7 @@ export function MercadoScreen() {
 								<p className="pt-2 text-13 text-muted-foreground">
 									Los productos siguen en tu catálogo.
 								</p>
-							</div>
+							</DrawerBody>
 							<DrawerFooter>
 								<Button
 									type="button"

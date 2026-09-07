@@ -5,6 +5,7 @@ import { SupermarketsSection } from "@/components/settings/supermarkets-section"
 import { Button } from "@/components/ui/button";
 import {
 	Drawer,
+	DrawerBody,
 	DrawerContent,
 	DrawerDescription,
 	DrawerFooter,
@@ -64,7 +65,7 @@ export function AjustesDrawer() {
 					<DrawerHeader>
 						<DrawerTitle>Ajustes</DrawerTitle>
 					</DrawerHeader>
-					<div className="flex flex-col gap-4 overflow-y-auto px-4 pb-6">
+					<DrawerBody className="pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
 						<div>
 							<p className="text-13 text-muted-foreground">Hogar</p>
 							<p className="text-17 font-medium">{link?.name}</p>
@@ -106,7 +107,7 @@ export function AjustesDrawer() {
 								</div>
 							</>
 						)}
-					</div>
+					</DrawerBody>
 				</DrawerContent>
 			</Drawer>
 
