@@ -12,6 +12,7 @@ import {
 	indexActiveListItemsByProduct,
 	nextPosition,
 	searchProducts,
+	splitByChecked,
 	supermarketColorClass,
 } from "./selectors";
 
@@ -98,6 +99,20 @@ describe("indexActiveListItemsByProduct", () => {
 		const byProduct = indexActiveListItemsByProduct([removed, active]);
 		expect(byProduct.size).toBe(1);
 		expect(byProduct.get("prod-1")).toBe(active);
+	});
+});
+
+describe("splitByChecked", () => {
+	it("separates pending and checked, keeping the relative order of each group (D-009)", () => {
+		const a = { item: listItem({ id: "li-a", checked: false }) };
+		const b = { item: listItem({ id: "li-b", checked: true }) };
+		const c = { item: listItem({ id: "li-c", checked: false }) };
+		const d = { item: listItem({ id: "li-d", checked: true }) };
+
+		const { pending, checked } = splitByChecked([a, b, c, d]);
+
+		expect(pending.map((e) => e.item.id)).toEqual(["li-a", "li-c"]);
+		expect(checked.map((e) => e.item.id)).toEqual(["li-b", "li-d"]);
 	});
 });
 

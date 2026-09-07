@@ -6,8 +6,10 @@ import {
 	ProductDrawer,
 	type ProductDrawerState,
 } from "@/components/catalog/product-drawer";
+import { QuantityControl } from "@/components/quantity-control";
 import { Input } from "@/components/ui/input";
 import { getHouseholdLink } from "@/lib/household-link";
+import { useListItemMutations } from "@/lib/mutations/list-items";
 import { useProductMutations } from "@/lib/mutations/products";
 import {
 	categoriesQuery,
@@ -24,9 +26,10 @@ import type { Product } from "@/schemas/domain";
 
 /**
  * Catálogo permanente de productos del hogar (experiencia_usuario §5, RF-019, RF-009 en cuanto al
- * alta). Deliberadamente NO toca la lista de mercado (fase 4): no hay control de cantidad ni de
- * "agregar", solo el catálogo -- crear, buscar, agrupar por supermercado, editar y borrar. El
- * icono de Ajustes vive aquí, no en la barra de pestañas (experiencia_usuario §3).
+ * alta). Cada fila lleva el control combinado de agregar/cantidad de D-034 (Fase 4): crear un
+ * producto sigue sin agregarlo a la lista (RN-001), pero desde aquí sí se agrega, se sube o se
+ * baja la cantidad y se quita. El icono de Ajustes vive aquí, no en la barra de pestañas
+ * (experiencia_usuario §3).
  */
 export function CatalogoScreen() {
 	const householdId = getHouseholdLink()?.householdId;
@@ -74,6 +77,10 @@ export function CatalogoScreen() {
 	// un `string` -- el hook debe llamarse siempre en el mismo orden (reglas de hooks), nunca tras
 	// una condición.
 	const productMutations = useProductMutations(householdId ?? "", queryClient);
+	const listItemMutations = useListItemMutations(
+		householdId ?? "",
+		queryClient,
+	);
 
 	function handleCreate(
 		input: {
@@ -141,23 +148,48 @@ export function CatalogoScreen() {
 							<h2 className="px-4 py-2 text-13 font-bold tracking-[var(--tracking-label)] text-muted-foreground wdth-75">
 								{(section.supermarket?.name ?? "Sin asignar").toUpperCase()}
 							</h2>
-							{section.products.map((product) => (
-								<button
-									key={product.id}
-									type="button"
-									onClick={() => setDrawer({ mode: "edit", product })}
-									className="flex min-h-[var(--min-height-tap)] w-full items-center justify-between border-b border-border px-4 text-left"
-								>
-									<span className="text-17 text-foreground">
-										{product.name}
-									</span>
-									{product.brand && (
-										<span className="text-14 text-muted-foreground">
-											{product.brand}
-										</span>
-									)}
-								</button>
-							))}
+							{section.products.map((product) => {
+								const activeItem =
+									activeListItemByProduct.get(product.id) ?? null;
+								return (
+									<div
+										key={product.id}
+										className="flex min-h-[var(--min-height-tap)] items-center border-b border-border pl-4"
+									>
+										{/* Abrir detalle solo se hace desde el Catálogo, tocando el nombre
+										(experiencia_usuario §5/§8); el control de cantidad de la derecha
+										necesita su propia zona de toque (D-034), así que la fila ya no es un
+										único <button>. */}
+										<button
+											type="button"
+											onClick={() => setDrawer({ mode: "edit", product })}
+											className="flex min-h-[var(--min-height-tap)] flex-1 items-center gap-2 py-2 text-left"
+										>
+											<span className="text-17 text-foreground">
+												{product.name}
+											</span>
+											{product.brand && (
+												<span className="text-14 text-muted-foreground">
+													{product.brand}
+												</span>
+											)}
+										</button>
+										<QuantityControl
+											quantity={activeItem?.quantity ?? 0}
+											productName={product.name}
+											onAdd={() => listItemMutations.addToList(product)}
+											onIncrement={() =>
+												activeItem &&
+												listItemMutations.changeQuantity(activeItem, 1)
+											}
+											onDecrement={() =>
+												activeItem &&
+												listItemMutations.changeQuantity(activeItem, -1)
+											}
+										/>
+									</div>
+								);
+							})}
 						</div>
 					))
 				)}

@@ -129,6 +129,21 @@ export function groupMarketListBySupermarket(
 	return sections;
 }
 
+/**
+ * Dentro de una sección del Mercado, los marcados bajan al final (D-009), tras el orden por
+ * categoría que ya trae `groupMarketListBySupermarket`: se parte en dos grupos preservando ese
+ * orden relativo, en vez de volver a ordenar. `MercadoScreen` pinta `pending` y, si no está vacío,
+ * `checked` después de un separador.
+ */
+export function splitByChecked<T extends { item: ListItem }>(
+	entries: T[],
+): { pending: T[]; checked: T[] } {
+	return {
+		pending: entries.filter((entry) => !entry.item.checked),
+		checked: entries.filter((entry) => entry.item.checked),
+	};
+}
+
 export interface CatalogSection {
 	/** `null` es el grupo "Sin asignar" (D-002). */
 	supermarket: Supermarket | null;

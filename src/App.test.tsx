@@ -42,8 +42,11 @@ describe("App", () => {
 		setHouseholdLink(HOUSEHOLD);
 		renderAt("/");
 		await screen.findByRole("heading", { name: /mercado/i });
-		expect(screen.getByRole("link", { name: /mercado/i })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: /catálogo/i })).toBeInTheDocument();
+		// Nombre exacto: el Mercado vacío también enlaza "Ir al catálogo" (D-007/estados vacíos), así
+		// que un regex suelto encontraría dos coincidencias -- la pestaña de la barra se llama,
+		// literalmente y nada más, "Catálogo".
+		expect(screen.getByRole("link", { name: "Mercado" })).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Catálogo" })).toBeInTheDocument();
 	});
 
 	it("sin hogar vinculado todavía, redirige a onboarding en vez de la barra de pestañas (D-014)", async () => {

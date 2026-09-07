@@ -1,5 +1,8 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Outlet } from "@tanstack/react-router";
 import { BottomNav } from "@/components/bottom-nav";
+import { getHouseholdLink } from "@/lib/household-link";
+import { useHouseholdRealtime } from "@/lib/realtime";
 import { supabaseConfigError } from "@/lib/supabase";
 
 /**
@@ -9,11 +12,20 @@ import { supabaseConfigError } from "@/lib/supabase";
  * necesita su propia salida (drawers, Fase 2b en adelante) — este shell solo
  * resuelve la navegación de nivel superior.
  *
+ * `AppShell` monta una sola vez mientras el dispositivo se queda dentro de las dos pestañas
+ * (el guardia de router.tsx solo lo desmonta al volver a onboarding), así que es el sitio para
+ * abrir la suscripción de Realtime (Fase 4, "desechable a propósito": ver `lib/realtime.ts`) una
+ * sola vez por hogar, en vez de una vez por pantalla.
+ *
  * El aviso de configuración es deliberadamente mínimo (una franja de texto, sin diseño de Fase 5):
  * el despliegue de Vercel actual no tiene las variables de Supabase, y sin este aviso el fallo
  * quedaría solo en consola, invisible para quien abra la URL en el iPhone.
  */
 export function AppShell() {
+	const householdId = getHouseholdLink()?.householdId;
+	const queryClient = useQueryClient();
+	useHouseholdRealtime(householdId, queryClient);
+
 	return (
 		<div className="flex min-h-dvh flex-col">
 			{supabaseConfigError ? (
