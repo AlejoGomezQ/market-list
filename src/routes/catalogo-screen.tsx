@@ -204,7 +204,11 @@ export function CatalogoScreen() {
 										) : (
 											<button
 												type="button"
-												aria-label={`Agregar ${product.name} a la lista`}
+												// Etiqueta distinta de la del carrito ("Agregar X a la lista"), que
+												// hace la misma acción pero es un objetivo de toque aparte: dos
+												// botones con el mismo nombre accesible en una fila confunden al
+												// lector de pantalla.
+												aria-label={`${product.name}, agregar a la lista`}
 												onClick={() => listItemMutations.addToList(product)}
 												className="flex min-h-[var(--min-height-tap)] flex-1 items-center gap-2 py-2 text-left text-17 text-muted-foreground"
 											>
