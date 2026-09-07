@@ -250,16 +250,15 @@ function ProductForm({
 						<button
 							type="button"
 							aria-pressed={supermarketId === null}
-							aria-label="Sin asignar"
 							onClick={() => setSupermarketId(null)}
 							className={cn(
-								"min-h-[var(--min-height-tap)] min-w-[var(--min-width-tap)] rounded-[var(--radius-control)] border px-3 text-14",
+								"min-h-[var(--min-height-tap)] rounded-[var(--radius-control)] border px-3 text-14",
 								supermarketId === null
 									? "border-foreground bg-foreground text-background"
 									: "border-border text-muted-foreground",
 							)}
 						>
-							—
+							Sin asignar
 						</button>
 					</div>
 				</div>
