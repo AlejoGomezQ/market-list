@@ -7,6 +7,7 @@ import type {
 } from "@/schemas/domain";
 import {
 	findSimilarProduct,
+	formatMarketListForSharing,
 	groupMarketListBySupermarket,
 	groupProductsBySupermarket,
 	indexActiveListItemsByProduct,
@@ -330,6 +331,55 @@ describe("groupProductsBySupermarket", () => {
 	it("excludes deleted products entirely (RF-003)", () => {
 		const products = [product({ id: "p-gone", deleted_at: ts })];
 		expect(groupProductsBySupermarket(products, [])).toHaveLength(0);
+	});
+});
+
+describe("formatMarketListForSharing", () => {
+	const entry = (over: Partial<Product & ListItem>) => ({
+		item: listItem({
+			product_id: over.id ?? "prod-1",
+			quantity: over.quantity ?? 1,
+			checked: over.checked ?? false,
+		}),
+		product: product({ id: over.id ?? "prod-1", name: over.name ?? "Leche" }),
+	});
+
+	it("starts with the supermarket name as header, then a blank line", () => {
+		const text = formatMarketListForSharing("Supermu", [
+			entry({ name: "Leche" }),
+		]);
+		expect(text).toBe("Supermu\n\nLeche");
+	});
+
+	it("lists only pending products, excluding the checked ones", () => {
+		const text = formatMarketListForSharing("Supermu", [
+			entry({ id: "p1", name: "Leche", checked: false }),
+			entry({ id: "p2", name: "Pan", checked: true }),
+		]);
+		expect(text).toBe("Supermu\n\nLeche");
+	});
+
+	it("appends ' x{n}' only when quantity is greater than 1", () => {
+		const text = formatMarketListForSharing("Supermu", [
+			entry({ id: "p1", name: "Leche", quantity: 1 }),
+			entry({ id: "p2", name: "Huevos", quantity: 12 }),
+		]);
+		expect(text).toBe("Supermu\n\nLeche\nHuevos x12");
+	});
+
+	it("returns just the header when nothing is pending", () => {
+		const text = formatMarketListForSharing("Supermu", [
+			entry({ name: "Leche", checked: true }),
+		]);
+		expect(text).toBe("Supermu");
+	});
+
+	it("contains no emojis", () => {
+		const text = formatMarketListForSharing("Supermu", [
+			entry({ id: "p1", name: "Leche", quantity: 2 }),
+			entry({ id: "p2", name: "Pan" }),
+		]);
+		expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
 	});
 });
 

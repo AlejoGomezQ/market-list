@@ -144,6 +144,30 @@ export function splitByChecked<T extends { item: ListItem }>(
 	};
 }
 
+/**
+ * Texto plano para compartir "lo que falta" de un supermercado con alguien que no tiene la app
+ * (backlog_v2 §3). Solo lectura, sin decoración ni emojis (D-035, identidad_visual §8): cabecera con
+ * el nombre del supermercado, una línea en blanco y una línea por producto pendiente
+ * (`!item.checked`). La cantidad se imprime como sufijo ` x{n}` solo si es mayor que 1
+ * (identidad_visual §4); nunca la marca. Sin pendientes devuelve solo la cabecera -- el llamador ya
+ * oculta el botón en ese caso, esto es la red de seguridad.
+ */
+export function formatMarketListForSharing(
+	supermarketName: string,
+	entries: Array<{ item: ListItem; product: Product }>,
+): string {
+	const lines = entries
+		.filter((entry) => !entry.item.checked)
+		.map((entry) =>
+			entry.item.quantity > 1
+				? `${entry.product.name} x${entry.item.quantity}`
+				: entry.product.name,
+		);
+	return lines.length === 0
+		? supermarketName
+		: `${supermarketName}\n\n${lines.join("\n")}`;
+}
+
 export interface CatalogSection {
 	/** `null` es el grupo "Sin asignar" (D-002). */
 	supermarket: Supermarket | null;
