@@ -1,4 +1,4 @@
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, ShoppingCartPlus } from "lucide-react";
 
 interface QuantityControlProps {
 	/** 0 = el producto no está en la lista de mercado todavía. */
@@ -16,8 +16,9 @@ interface QuantityControlProps {
 }
 
 /**
- * El control combinado de D-034: fuera de la lista es un `+`; al tocarlo entra con cantidad 1 y el
- * propio botón se convierte en el contador `− 1 +` -- el segundo toque en `+` ya sube a 2. Cierra
+ * El control combinado de D-034: fuera de la lista es un carrito con `+` (comunica "meter en la
+ * compra", no "sumar"); al tocarlo entra con cantidad 1 y el propio botón se convierte en el
+ * contador `− 1 +` -- el segundo toque en `+` ya sube a 2. Cierra
  * UX-002 y UX-003 a la vez, con un solo control. Bajar a 0 (un toque en `−` con cantidad 1) quita
  * de la lista (RN-003: el producto sigue en el catálogo).
  *
@@ -46,7 +47,11 @@ export function QuantityControl({
 				}}
 				className="flex size-[var(--min-height-tap)] items-center justify-center text-foreground"
 			>
-				<Plus aria-hidden="true" className="size-5" strokeWidth={1.75} />
+				<ShoppingCartPlus
+					aria-hidden="true"
+					className="size-5"
+					strokeWidth={1.75}
+				/>
 			</button>
 		);
 	}

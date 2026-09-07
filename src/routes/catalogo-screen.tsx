@@ -21,7 +21,9 @@ import {
 	groupProductsBySupermarket,
 	indexActiveListItemsByProduct,
 	searchProducts,
+	supermarketColorClass,
 } from "@/lib/selectors";
+import { cn } from "@/lib/utils";
 import type { Product } from "@/schemas/domain";
 
 /**
@@ -151,8 +153,26 @@ export function CatalogoScreen() {
 								return (
 									<div
 										key={product.id}
-										className="flex min-h-[var(--min-height-tap)] items-center border-b border-border pl-4"
+										className="relative flex min-h-[var(--min-height-tap)] items-center border-b border-border pl-4"
 									>
+										{/* Producto ya en la lista de mercado (RN-002): una barra a la izquierda
+										para leerlo de un vistazo, con el color del supermercado de la sección
+										(identidad_visual §2, "el color pertenece a los supermercados"); gris
+										acromático en "Sin asignar", que no tiene color. No desplaza el texto:
+										va absoluta, el nombre siempre arranca en la misma vertical (§4). */}
+										{activeItem && (
+											<span
+												aria-hidden="true"
+												className={cn(
+													"absolute inset-y-0 left-0 w-[3px]",
+													section.supermarket
+														? supermarketColorClass(
+																section.supermarket.position,
+															)
+														: "bg-muted-foreground",
+												)}
+											/>
+										)}
 										{/* Abrir detalle solo se hace desde el Catálogo, tocando el nombre
 										(experiencia_usuario §5/§8); el control de cantidad de la derecha
 										necesita su propia zona de toque (D-034), así que la fila ya no es un
