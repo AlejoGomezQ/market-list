@@ -61,3 +61,51 @@ la cantidad solo si es mayor que 1 (identidad_visual §4)—. Fallback a copiar 
   drawer de finalizar compra. Cuidar el "pocos iconos" de identidad_visual §5.
 - Formato del texto: agrupado o plano, con o sin la marca. El texto compartido también sigue el
   tono de identidad_visual §8.
+
+## 4. Orden de recorrido propio por supermercado (RF-021)
+
+Hoy, dentro de cada supermercado la lista se ordena **por categoría** (D-031,
+`groupMarketListBySupermarket` en `src/lib/selectors.ts`), como aproximación al recorrido de la
+tienda. Pero cada supermercado tiene otro orden de pasillos, y yendo con el carro de verdad tener
+los productos desordenados respecto al recorrido es fricción sobre el caso de uso central. D-031 ya
+lo anticipa: *"El recorrido propio de cada supermercado (RF-021) sustituirá este orden en V2."*
+
+**Toca:**
+
+- Una columna o tabla de orden por `(supermarket_id, category_id)` (o por producto). El modelo ya
+  debe dejar sitio (CLAUDE.md).
+- El selector de agrupación/orden de la lista de Mercado.
+- Una UI para reordenar con una mano (flechas arriba/abajo antes que arrastrar), probablemente en
+  Ajustes por supermercado, o en la propia sección de Mercado.
+
+## 5. Historial de compras
+
+Consultar qué se compró y cuándo, en una lista que se repite. Es **barato**: D-026 ya guarda las
+lápidas de `list_items` con `removed_at` y `removed_reason` (`'purchased'` frente a `'removed'`),
+literalmente *"para sembrar el historial de V2 sin tabla adicional"*. Los datos ya se acumulan;
+falta una vista de lectura.
+
+**Toca / preguntas abiertas:**
+
+- Hoy finalizar una compra **no agrupa los items en una entidad "compra"**: quedan lápidas sueltas
+  con `removed_at` cercanos. Para un historial limpio (y para el total del punto 6) probablemente
+  haga falta un id de compra/lote que se escriba al finalizar.
+- Pantalla o sección nueva: queda fuera de las dos pestañas actuales (Mercado/Catálogo), es una
+  decisión de navegación.
+- Habilita más adelante las sugerencias automáticas ("no compras café hace tres semanas").
+
+## 6. Total gastado por compra
+
+Al finalizar una compra (el drawer de confirmación en `src/routes/mercado-screen.tsx`), un campo
+**opcional** para escribir el **total gastado** en esa compra. Un solo número por compra, no
+precios por producto — así se evita la fricción de captura que dejó "precios" fuera del MVP. En el
+historial (punto 5), cada compra muestra su total, lo que permite llevar cuentas básicas (gasto por
+mes, por supermercado).
+
+**Toca / preguntas abiertas:**
+
+- Depende del punto 5 y del id de compra/lote que ese necesita: el total cuelga de la "compra", no
+  de los items.
+- El campo es opcional: finalizar sigue funcionando sin escribir nada (D-001, finalizar no se
+  bloquea).
+- Una sola moneda, la del hogar, sin conversión. ¿Editable después desde el historial?
