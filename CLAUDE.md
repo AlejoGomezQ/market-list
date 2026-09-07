@@ -94,6 +94,8 @@ Fuera del MVP (no implementar sin que el usuario lo pida): historial de compras,
 
 El modelo de datos sí debe **dejar la puerta abierta** a: sucursales de un mismo supermercado, orden de recorrido propio por supermercado (RF-021), historial y más de dos usuarios por hogar (RNF-006).
 
+Las ideas de V2 que van surgiendo del uso real (Fase 8) se recogen en `docs/backlog_v2.md`: no están decididas ni priorizadas, no se implementan sin que el usuario lo pida.
+
 ## Reglas de interfaz
 
 Se usa **con una mano, de pie, empujando un carro**. Eso decide casi todo (detalle en `docs/experiencia_usuario_v0.1.md`):
