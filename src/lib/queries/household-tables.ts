@@ -24,6 +24,19 @@ export function householdTableKey(entity: SyncedEntity, householdId: string) {
 	return [entity, householdId] as const;
 }
 
+/**
+ * Fase 6/estrategia_sincronizacion §6: `gcTime: Infinity` ya estaba desde la Fase 2a. Se le suma
+ * `staleTime: Infinity` -- el `queryFn` de cada consulta ("traer todo") solo debe correr cuando no
+ * hay nada en caché todavía (primer arranque tras unirse al hogar, §3.1); a partir de ahí, quien
+ * mantiene esto al día es el delta pull por cursor y Realtime (`sync/delta-pull.ts`,
+ * `realtime.ts`), no un refetch automático de TanStack Query. Sin `staleTime: Infinity`, cada
+ * montaje de pantalla dispararía otra vez el "traer todo" que esta fase existe para reemplazar.
+ */
+const PERSISTED_TABLE_QUERY_OPTIONS = {
+	gcTime: Number.POSITIVE_INFINITY,
+	staleTime: Number.POSITIVE_INFINITY,
+} as const;
+
 async function fetchHouseholdTable<T>(
 	table: SyncedEntity,
 	householdId: string,
@@ -52,7 +65,7 @@ export function supermarketsQuery(householdId: string) {
 				householdId,
 				supermarketSchema,
 			),
-		gcTime: Number.POSITIVE_INFINITY,
+		...PERSISTED_TABLE_QUERY_OPTIONS,
 	});
 }
 
@@ -61,7 +74,7 @@ export function categoriesQuery(householdId: string) {
 		queryKey: householdTableKey("categories", householdId),
 		queryFn: () =>
 			fetchHouseholdTable<Category>("categories", householdId, categorySchema),
-		gcTime: Number.POSITIVE_INFINITY,
+		...PERSISTED_TABLE_QUERY_OPTIONS,
 	});
 }
 
@@ -70,7 +83,7 @@ export function productsQuery(householdId: string) {
 		queryKey: householdTableKey("products", householdId),
 		queryFn: () =>
 			fetchHouseholdTable<Product>("products", householdId, productSchema),
-		gcTime: Number.POSITIVE_INFINITY,
+		...PERSISTED_TABLE_QUERY_OPTIONS,
 	});
 }
 
@@ -79,6 +92,6 @@ export function listItemsQuery(householdId: string) {
 		queryKey: householdTableKey("list_items", householdId),
 		queryFn: () =>
 			fetchHouseholdTable<ListItem>("list_items", householdId, listItemSchema),
-		gcTime: Number.POSITIVE_INFINITY,
+		...PERSISTED_TABLE_QUERY_OPTIONS,
 	});
 }

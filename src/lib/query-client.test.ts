@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createSyncQueryClient } from "./query-client";
+import {
+	createSyncQueryClient,
+	persistOptions,
+	queuePersistOptions,
+} from "./query-client";
 import { SYNC_MUTATION_KEY, syncPatches } from "./sync/mutation";
 
 describe("createSyncQueryClient", () => {
@@ -34,5 +38,45 @@ describe("createSyncQueryClient", () => {
 			...client.getMutationDefaults(SYNC_MUTATION_KEY),
 		});
 		expect(mutation.options.mutationFn).toBe(syncPatches);
+	});
+
+	it("registra retry/retryDelay junto al mutationFn (§5.1/§5.2, clasificación y backoff)", () => {
+		const client = createSyncQueryClient();
+		const defaults = client.getMutationDefaults(SYNC_MUTATION_KEY);
+		expect(typeof defaults?.retry).toBe("function");
+		expect(typeof defaults?.retryDelay).toBe("function");
+	});
+});
+
+describe("D-030 -- la caché es desechable, la cola de salida no: dos persistidores separados", () => {
+	it("son dos Persister distintos, cada uno en su propio object store de IndexedDB", () => {
+		expect(persistOptions.persister).not.toBe(queuePersistOptions.persister);
+	});
+
+	it("el persistidor de la caché nunca guarda mutaciones, pase lo que pase el default de la librería", () => {
+		expect(
+			persistOptions.dehydrateOptions?.shouldDehydrateMutation?.(
+				// biome-ignore lint/suspicious/noExplicitAny: solo hace falta el predicado, no una Mutation real.
+				{ state: { isPaused: true } } as any,
+			),
+		).toBe(false);
+	});
+
+	it("el persistidor de la cola nunca guarda consultas de tabla", () => {
+		const state = { status: "success" };
+		// biome-ignore lint/suspicious/noExplicitAny: solo hace falta el predicado, no una Query real.
+		const fakeQuery = { queryKey: ["supermarkets", "hh-1"], state } as any;
+		expect(
+			queuePersistOptions.dehydrateOptions?.shouldDehydrateQuery?.(fakeQuery),
+		).toBe(false);
+	});
+
+	it("el persistidor de la cola sí guarda una mutación pausada (el comportamiento por defecto de la librería)", () => {
+		expect(
+			queuePersistOptions.dehydrateOptions?.shouldDehydrateMutation?.(
+				// biome-ignore lint/suspicious/noExplicitAny: solo hace falta el predicado, no una Mutation real.
+				{ state: { isPaused: true } } as any,
+			),
+		).toBe(true);
 	});
 });

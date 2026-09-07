@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MarketSection } from "@/components/market/market-section";
+import { SyncStatusIndicator } from "@/components/sync-status";
 import { Button } from "@/components/ui/button";
 import {
 	Drawer,
@@ -211,6 +212,9 @@ export function MercadoScreen() {
 							/>
 						)}
 					</button>
+				</div>
+				<div className="mt-1">
+					<SyncStatusIndicator queryClient={queryClient} />
 				</div>
 
 				{searchOpen && (

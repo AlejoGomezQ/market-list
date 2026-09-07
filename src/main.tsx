@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 import { ensureAnonymousSession } from "./lib/auth.ts";
+import { queryClient } from "./lib/query-client.ts";
+import { startOutboxQueue } from "./lib/sync/queue.ts";
 
 // RF-022/D-020: sin esto no hay `auth.uid()` con el que `is_member()` (RLS) o `create_household`/
 // `join_household` puedan trabajar. Sin esperar (no bloquea el primer render, D-016/local-first: la
@@ -12,6 +14,13 @@ import { ensureAnonymousSession } from "./lib/auth.ts";
 // es el único punto donde de verdad hace falta que ya exista sesión.
 void ensureAnonymousSession().catch((error) => {
 	console.error("No se pudo iniciar la sesión anónima:", error);
+});
+
+// Fase 6/estrategia_sincronizacion §3.2: "subir antes de bajar". Arranca cuanto antes, sin
+// esperar a que React monte -- `setMutationDefaults` ya ocurrió de forma síncrona al crear
+// `queryClient` (`query-client.ts`), así que restaurar y reanudar la cola aquí es seguro.
+void startOutboxQueue(queryClient).catch((error) => {
+	console.error("No se pudo restaurar la cola de salida:", error);
 });
 
 // registerType: 'prompt' (vite.config.ts): no autoUpdate, así que el nuevo
