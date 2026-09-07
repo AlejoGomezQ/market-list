@@ -7,7 +7,12 @@ import {
 	type Query,
 	QueryClient,
 } from "@tanstack/react-query";
-import { del as idbDel, get as idbGet, set as idbSet } from "idb-keyval";
+import {
+	clear as idbClear,
+	del as idbDel,
+	get as idbGet,
+	set as idbSet,
+} from "idb-keyval";
 import { cacheStore, queueStore } from "@/lib/sync/idb-stores";
 import {
 	SYNC_MUTATION_KEY,
@@ -54,6 +59,17 @@ export function createSyncQueryClient(): QueryClient {
 }
 
 export const queryClient = createSyncQueryClient();
+
+/**
+ * Vacía los dos almacenes de IndexedDB: la caché de las cuatro consultas de tabla y la cola de
+ * salida (con sus cursores de delta pull y la cuarentena). Se usa al salir del hogar (D-014):
+ * este dispositivo no debe conservar nada del catálogo ni de la lista. `ajustes-screen.tsx` recarga
+ * la app entera justo después -- el resto del estado vivo (QueryClient en memoria, motor de sync,
+ * suscripción de la cola de `main.tsx`) solo se limpia de verdad volviendo a arrancar.
+ */
+export async function clearPersistedSyncState(): Promise<void> {
+	await Promise.all([idbClear(cacheStore), idbClear(queueStore)]);
+}
 
 /**
  * idb-keyval como storage subyacente (D-022): expone `get/set/del` sobre un *object store* de

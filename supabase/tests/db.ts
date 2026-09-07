@@ -140,6 +140,10 @@ export async function regenerateHouseholdCode(
 	return { householdId: row.household_id, joinCode: row.join_code };
 }
 
+export async function leaveHousehold(client: Client): Promise<void> {
+	await client.query("select leave_household() as result");
+}
+
 export type PatchResult = { entity: string; id: string; status: string };
 
 export async function syncPush(

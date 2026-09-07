@@ -35,6 +35,8 @@ const regenerateResultSchema = z.object({
 	join_code: z.string().min(1),
 });
 
+const leaveResultSchema = z.object({ left: z.literal(true) });
+
 function requireSupabase() {
 	if (!supabase) {
 		throw new Error(supabaseConfigError ?? "Supabase no está configurado.");
@@ -83,4 +85,16 @@ export async function regenerateHouseholdCode(): Promise<string> {
 	const { data, error } = await client.rpc("regenerate_household_code");
 	if (error) throw error;
 	return regenerateResultSchema.parse(data).join_code;
+}
+
+/**
+ * Sale del hogar (D-014): borra la membresía de este dispositivo en el servidor. La limpieza de los
+ * datos locales (vínculo en localStorage, caché e IndexedDB) la hace quien llama, tras el OK --
+ * `ajustes-screen.tsx`. Para volver a entrar hace falta el código.
+ */
+export async function leaveHousehold(): Promise<void> {
+	const client = requireSupabase();
+	const { data, error } = await client.rpc("leave_household");
+	if (error) throw error;
+	leaveResultSchema.parse(data);
 }

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { CategoriesSection } from "@/components/settings/categories-section";
@@ -12,8 +13,14 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from "@/components/ui/drawer";
-import { regenerateHouseholdCode } from "@/lib/household";
-import { getHouseholdLink, updateStoredJoinCode } from "@/lib/household-link";
+import { leaveHousehold, regenerateHouseholdCode } from "@/lib/household";
+import {
+	clearHouseholdLink,
+	getHouseholdLink,
+	updateStoredJoinCode,
+} from "@/lib/household-link";
+import { clearPersistedSyncState } from "@/lib/query-client";
+import { useSyncStatus } from "@/lib/sync/use-sync-status";
 
 /**
  * Ajustes como drawer desde abajo (D-023), no como pantalla propia -- cuelga de `/catalogo` en
@@ -26,11 +33,25 @@ import { getHouseholdLink, updateStoredJoinCode } from "@/lib/household-link";
  */
 export function AjustesDrawer() {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
+	const sync = useSyncStatus(queryClient);
 	const [link, setLink] = useState(() => getHouseholdLink());
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
+	const [leaveOpen, setLeaveOpen] = useState(false);
+	const [leavePending, setLeavePending] = useState(false);
+	const [leaveError, setLeaveError] = useState<string | null>(null);
+
+	// Cambios que aún no llegaron al servidor: pausados por falta de red, o en cuarentena (rechazo
+	// permanente, que nunca se resuelve solo). Salir vacía IndexedDB, así que estos se pierden.
+	const unsyncedCount =
+		sync.kind === "offline"
+			? sync.pendingCount
+			: sync.kind === "quarantined"
+				? sync.count
+				: 0;
 
 	function close() {
 		navigate({ to: "/catalogo" });
@@ -50,6 +71,26 @@ export function AjustesDrawer() {
 			);
 		} finally {
 			setPending(false);
+		}
+	}
+
+	async function handleLeave() {
+		setLeavePending(true);
+		setLeaveError(null);
+		try {
+			await leaveHousehold();
+			clearHouseholdLink();
+			await clearPersistedSyncState();
+			// Recarga completa en vez de navigate(): es la única forma segura de tirar el QueryClient
+			// en memoria, el motor de sync (Realtime + delta pull de AppShell) y la suscripción de la
+			// cola de salida (main.tsx). Al rearrancar sin vínculo local, el guardia de router.tsx
+			// lleva a onboarding. No se restablece leavePending: la página se va.
+			window.location.assign("/");
+		} catch (err) {
+			setLeaveError(
+				err instanceof Error ? err.message : "No se pudo salir del hogar.",
+			);
+			setLeavePending(false);
 		}
 	}
 
@@ -107,6 +148,17 @@ export function AjustesDrawer() {
 								</div>
 							</>
 						)}
+
+						<div className="border-t border-border pt-4">
+							<Button
+								type="button"
+								variant="destructive"
+								className="min-h-[var(--min-height-tap)] w-full"
+								onClick={() => setLeaveOpen(true)}
+							>
+								Salir del hogar
+							</Button>
+						</div>
 					</DrawerBody>
 				</DrawerContent>
 			</Drawer>
@@ -141,6 +193,52 @@ export function AjustesDrawer() {
 							variant="outline"
 							className="min-h-[var(--min-height-tap)] w-full"
 							onClick={() => setConfirmOpen(false)}
+						>
+							Cancelar
+						</Button>
+					</DrawerFooter>
+				</DrawerContent>
+			</Drawer>
+
+			<Drawer open={leaveOpen} onOpenChange={setLeaveOpen}>
+				<DrawerContent>
+					<DrawerHeader>
+						<DrawerTitle>¿Salir de {link?.name}?</DrawerTitle>
+						<DrawerDescription>
+							Se borran los datos de este dispositivo. El catálogo y la lista
+							siguen en el servidor y en el otro dispositivo. Para volver a
+							entrar necesitarás el código del hogar.
+						</DrawerDescription>
+					</DrawerHeader>
+					<DrawerFooter>
+						{unsyncedCount > 0 && (
+							<p role="alert" className="text-14 text-destructive">
+								Tienes {unsyncedCount}{" "}
+								{unsyncedCount === 1
+									? "cambio sin guardar"
+									: "cambios sin guardar"}
+								. Si sales ahora se pierden.
+							</p>
+						)}
+						{leaveError && (
+							<p role="alert" className="text-14 text-destructive">
+								{leaveError}
+							</p>
+						)}
+						<Button
+							type="button"
+							variant="destructive"
+							disabled={leavePending}
+							className="min-h-[var(--min-height-tap)] w-full"
+							onClick={() => void handleLeave()}
+						>
+							Salir del hogar
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							className="min-h-[var(--min-height-tap)] w-full"
+							onClick={() => setLeaveOpen(false)}
 						>
 							Cancelar
 						</Button>

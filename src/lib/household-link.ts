@@ -47,6 +47,19 @@ export function updateStoredJoinCode(joinCode: string): void {
 }
 
 /**
+ * Borra el vínculo local: este dispositivo deja de tener hogar (salir del hogar, D-014). El guardia
+ * de `router.tsx` manda a onboarding en cuanto esto es null. `try/catch` por lo mismo que
+ * `getHouseholdLink`: si localStorage está inaccesible, no hay nada que borrar.
+ */
+export function clearHouseholdLink(): void {
+	try {
+		localStorage.removeItem(STORAGE_KEY);
+	} catch {
+		// localStorage inaccesible (modo privado agresivo): no hay vínculo que borrar.
+	}
+}
+
+/**
  * Fase 0 dejó pendiente esta llamada para "el momento de vincularse a un hogar" (crear o unirse).
  * Best-effort: Safari puede denegarla sin que sea un error de la app (D-018, riesgo residual ya
  * asumido ahí), y el propio navegador la ignora si no la soporta.

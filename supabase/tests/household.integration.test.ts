@@ -8,6 +8,7 @@ import {
 	createHousehold,
 	createProduct,
 	joinHousehold,
+	leaveHousehold,
 	patch,
 	regenerateHouseholdCode,
 	syncPush,
@@ -193,6 +194,65 @@ describe("regenerate_household_code", () => {
 	it("rechaza a quien no pertenece a ningún hogar", async () => {
 		const a = await newUser();
 		await expect(regenerateHouseholdCode(a.client)).rejects.toThrow();
+	});
+});
+
+describe("leave_household", () => {
+	it("borra la membresía: quien sale deja de ver las tablas del hogar (D-014)", async () => {
+		const a = await newUser();
+		const b = await newUser();
+		const { householdId, joinCode } = await createHousehold(a.client, "Casa");
+		await joinHousehold(b.client, joinCode);
+		const productId = await createProduct(b.client, householdId, {
+			name: "Leche",
+		});
+
+		await leaveHousehold(b.client);
+
+		const membership = await admin.query(
+			"select 1 from household_members where household_id = $1 and user_id = $2",
+			[householdId, b.userId],
+		);
+		expect(membership.rowCount).toBe(0);
+
+		// is_member() ya no es cierto para b: RLS le oculta las filas del hogar.
+		const seenByB = await b.client.query(
+			"select 1 from products where id = $1",
+			[productId],
+		);
+		expect(seenByB.rowCount).toBe(0);
+
+		// a sigue dentro y ve el catálogo intacto.
+		const seenByA = await a.client.query(
+			"select 1 from products where id = $1",
+			[productId],
+		);
+		expect(seenByA.rowCount).toBe(1);
+	});
+
+	it("volver a entrar con el código readmite al que salió", async () => {
+		const a = await newUser();
+		const b = await newUser();
+		const { householdId, joinCode } = await createHousehold(a.client, "Casa");
+		await joinHousehold(b.client, joinCode);
+		const productId = await createProduct(a.client, householdId, {
+			name: "Pan",
+		});
+
+		await leaveHousehold(b.client);
+		const rejoined = await joinHousehold(b.client, joinCode);
+
+		expect(rejoined.householdId).toBe(householdId);
+		const seenByB = await b.client.query(
+			"select 1 from products where id = $1",
+			[productId],
+		);
+		expect(seenByB.rowCount).toBe(1);
+	});
+
+	it("es idempotente: salir sin pertenecer a ningún hogar no lanza", async () => {
+		const a = await newUser();
+		await expect(leaveHousehold(a.client)).resolves.toBeUndefined();
 	});
 });
 
