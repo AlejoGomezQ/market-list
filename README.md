@@ -75,6 +75,34 @@ Los scripts reales, tal como están en `package.json`:
 | `pnpm test:watch` | Vitest en modo watch |
 | `pnpm gen:types` | Genera los tipos TypeScript desde el esquema de Supabase local |
 
+## Mantenimiento del proyecto de Supabase
+
+El workflow [`.github/workflows/supabase-maintenance.yml`](.github/workflows/supabase-maintenance.yml)
+mantiene vivo el proyecto remoto y hace copias de seguridad:
+
+- **Keep-alive**, cada 2 días: una petición a la API evita que el plan gratis pause el proyecto
+  tras ~7 días de inactividad. La pausa no borra datos, pero deja la app caída hasta reactivarla
+  a mano desde el dashboard.
+- **Backup**, el día 1 de cada mes: `supabase db dump --data-only`, cifrado con GPG y guardado
+  como artefacto del workflow (90 días). También se puede lanzar a mano desde la pestaña Actions.
+
+Requiere estos **secrets del repositorio** (Settings → Secrets and variables → Actions):
+
+| Secret | De dónde sale |
+|---|---|
+| `SUPABASE_URL` | Project Settings → API → Project URL (`https://<ref>.supabase.co`) |
+| `SUPABASE_ANON_KEY` | Project Settings → API → `anon` `public` |
+| `SUPABASE_DB_URL` | Project Settings → Database → Connection string → URI (con la contraseña) |
+| `BACKUP_PASSPHRASE` | Una frase que elijas tú. **Guárdala aparte**: sin ella, los backups son ilegibles. |
+
+Restaurar un backup descargado:
+
+```bash
+gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+  -o household-data.sql -d household-data.sql.gpg
+psql "$SUPABASE_DB_URL" -f household-data.sql
+```
+
 ## Documentación
 
 Toda la definición funcional, de arquitectura y de diseño vive en [`docs/`](docs). Para el

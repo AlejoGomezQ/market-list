@@ -1,0 +1,77 @@
+name: Mantenimiento de Supabase
+
+# Dos tareas contra el proyecto REMOTO de Supabase (el de uso real, no el local):
+#
+#  - keep-alive: un proyecto del plan gratis se pausa tras ~7 días sin ninguna
+#    petición a su API. Este ping cada 2 días cuenta como actividad y evita la
+#    pausa. La pausa no borra datos, pero deja la app caída hasta reactivarla a
+#    mano y abre la ventana de pérdida de cambios en cola (plan_implementacion,
+#    tabla de riesgos).
+#  - backup: un volcado de solo-datos el día 1 de cada mes, cifrado con GPG y
+#    guardado como artefacto del workflow (90 días de retención). Cifrado porque
+#    el repo es público y los artefactos de un repo público son descargables por
+#    cualquiera; sin la frase de paso el volcado no sirve de nada.
+#
+# GitHub desactiva los workflows programados si el repo pasa 60 días sin commits
+# (avisa por correo). Mientras el proyecto siga en desarrollo, no aplica.
+
+on:
+  schedule:
+    - cron: "40 7 */2 * *"   # keep-alive: cada 2 días
+    - cron: "40 7 1 * *"     # backup: día 1 de cada mes
+  workflow_dispatch:
+    inputs:
+      backup:
+        description: "Hacer también un backup ahora"
+        type: boolean
+        default: true
+
+jobs:
+  keepalive:
+    # En el cron de 2 días y en cualquier ejecución manual (es una sola petición, es barato).
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '40 7 */2 * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Petición a la API de Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          # Consulta real contra una tabla (RLS devuelve [] sin sesión, pero el SELECT
+          # se ejecuta en Postgres): es actividad de base de datos, no solo de gateway.
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            "${SUPABASE_URL}/rest/v1/categories?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}")
+          echo "HTTP ${code}"
+          test "${code}" = "200"
+
+  backup:
+    # El día 1 de cada mes, o manualmente si se marca la casilla.
+    if: >-
+      github.event.schedule == '40 7 1 * *' ||
+      (github.event_name == 'workflow_dispatch' && inputs.backup)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Volcar y cifrar los datos del hogar
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          # Solo datos (--data-only): el esquema ya está versionado en supabase/migrations.
+          supabase db dump --db-url "${SUPABASE_DB_URL}" --data-only -f household-data.sql
+          gpg --batch --yes --pinentry-mode loopback --cipher-algo AES256 \
+            --passphrase "${BACKUP_PASSPHRASE}" --symmetric household-data.sql
+          rm household-data.sql
+
+      - name: Guardar el backup como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: household-data-${{ github.run_id }}
+          path: household-data.sql.gpg
+          retention-days: 90
