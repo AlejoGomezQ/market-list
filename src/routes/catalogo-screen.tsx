@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet } from "@tanstack/react-router";
-import { Plus, Settings } from "lucide-react";
+import { Pencil, Plus, Settings } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
 	ProductDrawer,
@@ -168,37 +168,54 @@ export function CatalogoScreen() {
 								return (
 									<div
 										key={product.id}
-										className="flex min-h-[54px] items-center pl-4"
+										className="flex min-h-[54px] items-center"
 									>
-										{/* Abrir detalle solo se hace desde el Catálogo, tocando el nombre
-										(experiencia_usuario §5/§8); el control de cantidad de la derecha
-										necesita su propia zona de toque (D-034), así que la fila ya no es un
-										único <button>. */}
+										{/* Fila coherente con el Mercado (donde tocar la fila marca): tocar el
+										nombre agrega a la lista, la misma acción que el carrito. Editar sale a
+										un lápiz a la izquierda -- atenuado para que no compita con el nombre
+										(identidad_visual §1) -- y el control de cantidad de la derecha
+										conserva su propia zona de toque (D-034). */}
 										<button
 											type="button"
+											aria-label={`Editar ${product.name}`}
 											onClick={() => setDrawer({ mode: "edit", product })}
-											className="flex min-h-[var(--min-height-tap)] flex-1 items-center gap-2 py-2 text-left"
+											className="flex size-[var(--size-tap)] shrink-0 items-center justify-center text-muted-foreground"
 										>
-											{/* "En la lista" se lee por peso y tinta, no por color: el color
-											pertenece solo a los supermercados (identidad_visual §2, D-036) y un
-											matiz de "agregado" chocaría con una sección de color rojo. El propio
-											control (carrito -> − N +) ya confirma el alta. */}
-											<span
-												className={cn(
-													"text-17",
-													activeItem
-														? "font-medium text-foreground"
-														: "text-muted-foreground",
+											<Pencil
+												aria-hidden="true"
+												className="size-4"
+												strokeWidth={1.75}
+											/>
+										</button>
+										{/* Si el producto ya está en la lista, el nombre es texto plano: quitarlo
+										con un toque accidental perdería la cantidad ya puesta, y el − N + de la
+										derecha maneja todo desde ahí. "En la lista" se lee por peso y tinta, no
+										por color: el color pertenece solo a los supermercados
+										(identidad_visual §2, D-036). */}
+										{activeItem ? (
+											<span className="flex min-h-[var(--min-height-tap)] flex-1 items-center gap-2 py-2 text-17 font-medium text-foreground">
+												{product.name}
+												{product.brand && (
+													<span className="text-14 font-normal text-muted-foreground">
+														{product.brand}
+													</span>
 												)}
+											</span>
+										) : (
+											<button
+												type="button"
+												aria-label={`Agregar ${product.name} a la lista`}
+												onClick={() => listItemMutations.addToList(product)}
+												className="flex min-h-[var(--min-height-tap)] flex-1 items-center gap-2 py-2 text-left text-17 text-muted-foreground"
 											>
 												{product.name}
-											</span>
-											{product.brand && (
-												<span className="text-14 text-muted-foreground">
-													{product.brand}
-												</span>
-											)}
-										</button>
+												{product.brand && (
+													<span className="text-14 text-muted-foreground">
+														{product.brand}
+													</span>
+												)}
+											</button>
+										)}
 										<QuantityControl
 											quantity={activeItem?.quantity ?? 0}
 											productName={product.name}

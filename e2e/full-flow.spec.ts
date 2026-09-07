@@ -44,9 +44,12 @@ test("crear hogar, dar de alta un producto, agregarlo al mercado, marcarlo y fin
 	const catalogRow = page.getByText(productName, { exact: true });
 	await expect(catalogRow).toBeVisible();
 
-	// Agregar a la lista de mercado desde el control combinado del Catálogo (D-034).
+	// Agregar a la lista de mercado desde el carrito del Catálogo (D-034). Tocar el nombre
+	// hace lo mismo, pero comparte el aria-label con el carrito, así que aquí se filtra por el
+	// icono para apuntar al control combinado.
 	await page
 		.getByRole("button", { name: `Agregar ${productName} a la lista` })
+		.filter({ has: page.locator("svg") })
 		.click();
 	await expect(
 		page.getByRole("button", { name: `Quitar una unidad de ${productName}` }),
