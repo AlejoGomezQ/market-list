@@ -56,4 +56,65 @@ describe("listItemSchema", () => {
 		});
 		expect(result.success).toBe(false);
 	});
+
+	// Historial V2 (CAMINO A): purchase_batch_id / purchase_total.
+	function base(overrides: Record<string, unknown> = {}) {
+		return {
+			id,
+			household_id: id,
+			product_id: id,
+			quantity: 1,
+			checked: false,
+			checked_at: null,
+			created_at: ts,
+			updated_at: ts,
+			removed_at: null,
+			removed_reason: null,
+			purchase_batch_id: null,
+			purchase_total: null,
+			field_updated_at: {},
+			...overrides,
+		};
+	}
+
+	it("accepts purchase_batch_id / purchase_total as null (item no comprado)", () => {
+		expect(listItemSchema.safeParse(base()).success).toBe(true);
+	});
+
+	it("accepts a uuid purchase_batch_id and a non-negative purchase_total", () => {
+		const result = listItemSchema.safeParse(
+			base({
+				removed_at: ts,
+				removed_reason: "purchased",
+				purchase_batch_id: id,
+				purchase_total: 42.5,
+			}),
+		);
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts purchase_total 0", () => {
+		expect(listItemSchema.safeParse(base({ purchase_total: 0 })).success).toBe(
+			true,
+		);
+	});
+
+	it("rejects a negative purchase_total", () => {
+		expect(listItemSchema.safeParse(base({ purchase_total: -1 })).success).toBe(
+			false,
+		);
+	});
+
+	it("rejects a non-numeric purchase_total", () => {
+		expect(
+			listItemSchema.safeParse(base({ purchase_total: "10" })).success,
+		).toBe(false);
+	});
+
+	it("rejects a non-uuid purchase_batch_id", () => {
+		expect(
+			listItemSchema.safeParse(base({ purchase_batch_id: "not-a-uuid" }))
+				.success,
+		).toBe(false);
+	});
 });

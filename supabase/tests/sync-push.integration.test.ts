@@ -49,7 +49,7 @@ async function setup() {
 
 async function getListItem(client: Client, id: string) {
 	const r = await client.query(
-		"select id, product_id, quantity, checked, checked_at, removed_at, removed_reason from list_items where id = $1",
+		"select id, product_id, quantity, checked, checked_at, removed_at, removed_reason, purchase_batch_id, purchase_total from list_items where id = $1",
 		[id],
 	);
 	return r.rows[0] as
@@ -61,6 +61,8 @@ async function getListItem(client: Client, id: string) {
 				checked_at: string | null;
 				removed_at: string | null;
 				removed_reason: string | null;
+				purchase_batch_id: string | null;
+				purchase_total: string | null;
 		  }
 		| undefined;
 }
@@ -471,6 +473,110 @@ describe("C-007 — borrar un supermercado mientras se le asigna un producto", (
 		// Regla de dato (no de pintado): el producto sí queda apuntando al supermercado borrado --
 		// es la interfaz la que lo agrupa en "Sin asignar" (arquitectura §4.3, C-007).
 		expect(product.supermarket_id).toBe(supermarketId);
+	});
+});
+
+describe("historial de compras (backlog_v2 §5/§6, CAMINO A) — purchase_batch_id / purchase_total", () => {
+	/** Finaliza `itemIds` como un lote: mismo ts, mismo batchId, total opcional. Espeja buildFinalizePurchase. */
+	async function finalizeBatch(
+		client: Client,
+		itemIds: string[],
+		ts: string,
+		batchId: string,
+		total?: number,
+	) {
+		await syncPush(
+			client,
+			itemIds.map((id) =>
+				patch("list_items", id, ts, {
+					removed_at: ts,
+					removed_reason: "purchased",
+					purchase_batch_id: batchId,
+					...(total != null ? { purchase_total: total } : {}),
+				}),
+			),
+		);
+	}
+
+	it("un lote de finalizar estampa las 4 columnas en todos sus items, con el mismo purchase_batch_id", async () => {
+		const { client, householdId } = await setup();
+		const pA = await createProduct(client, householdId, { name: "Pan" });
+		const pB = await createProduct(client, householdId, { name: "Leche" });
+		const itemA = await addToList(client, householdId, pA);
+		const itemB = await addToList(client, householdId, pB);
+
+		const batchId = crypto.randomUUID();
+		await finalizeBatch(client, [itemA, itemB], tsAt(10), batchId, 42.5);
+
+		for (const id of [itemA, itemB]) {
+			const item = await getListItem(client, id);
+			expect(item?.removed_at).not.toBeNull();
+			expect(item?.removed_reason).toBe("purchased");
+			expect(item?.purchase_batch_id).toBe(batchId);
+			expect(Number(item?.purchase_total)).toBe(42.5);
+		}
+	});
+
+	it("finalizar sin total: purchase_total queda null, purchase_batch_id se escribe igual", async () => {
+		const { client, householdId } = await setup();
+		const productId = await createProduct(client, householdId);
+		const itemId = await addToList(client, householdId, productId);
+
+		const batchId = crypto.randomUUID();
+		await finalizeBatch(client, [itemId], tsAt(10), batchId);
+
+		const item = await getListItem(client, itemId);
+		expect(item?.purchase_batch_id).toBe(batchId);
+		expect(item?.purchase_total).toBeNull();
+	});
+
+	it("deshacer (buildUndoFinalize): purchase_batch_id y purchase_total vuelven a null", async () => {
+		const { client, householdId } = await setup();
+		const productId = await createProduct(client, householdId);
+		const itemId = await addToList(client, householdId, productId);
+
+		const batchId = crypto.randomUUID();
+		await finalizeBatch(client, [itemId], tsAt(10), batchId, 30);
+
+		await syncPush(client, [
+			patch("list_items", itemId, tsAt(20), {
+				removed_at: null,
+				purchase_batch_id: null,
+				purchase_total: null,
+			}),
+		]);
+
+		const item = await getListItem(client, itemId);
+		expect(item?.removed_at).toBeNull();
+		expect(item?.purchase_batch_id).toBeNull();
+		expect(item?.purchase_total).toBeNull();
+	});
+
+	it("idempotencia (D-025): reenviar el parche de finalizar no cambia las columnas nuevas", async () => {
+		const { client, householdId } = await setup();
+		const productId = await createProduct(client, householdId);
+		const itemId = await addToList(client, householdId, productId);
+
+		const batchId = crypto.randomUUID();
+		// ts en el pasado: sync_push lo acota a now() del servidor, así que un ts futuro haría que el
+		// reenvío ganara un v_ts mayor y volviera a aplicarse. Con un ts pasado los dos envíos usan
+		// exactamente el mismo v_ts y el segundo empata -> ignored_stale (D-025).
+		const ts = tsAt(-60_000);
+		const finalize = patch("list_items", itemId, ts, {
+			removed_at: ts,
+			removed_reason: "purchased",
+			purchase_batch_id: batchId,
+			purchase_total: 15,
+		});
+
+		const first = await syncPush(client, [finalize]);
+		expect(first[0].status).toBe("applied");
+		const second = await syncPush(client, [finalize]);
+		expect(second[0].status).toBe("ignored_stale");
+
+		const item = await getListItem(client, itemId);
+		expect(item?.purchase_batch_id).toBe(batchId);
+		expect(Number(item?.purchase_total)).toBe(15);
 	});
 });
 

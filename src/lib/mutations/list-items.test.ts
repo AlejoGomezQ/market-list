@@ -39,6 +39,8 @@ function listItem(overrides: Partial<ListItem> = {}): ListItem {
 		updated_at: ts,
 		removed_at: null,
 		removed_reason: null,
+		purchase_batch_id: null,
+		purchase_total: null,
 		field_updated_at: {},
 		...overrides,
 	};
@@ -72,10 +74,12 @@ describe("buildSetQuantity / buildRemoveFromList", () => {
 	});
 });
 
+const batch = "99999999-9999-9999-9999-999999999999";
+
 describe("buildFinalizePurchase (RF-017, D-001)", () => {
 	it("solo toca los ids explícitos que recibe, no reconsulta 'todo lo marcado'", () => {
 		const markedAtClick = ["li-1", "li-2"];
-		const patches = buildFinalizePurchase(markedAtClick, ts);
+		const patches = buildFinalizePurchase(markedAtClick, ts, batch);
 
 		expect(patches).toHaveLength(2);
 		expect(patches.map((p) => p.id)).toEqual(["li-1", "li-2"]);
@@ -84,7 +88,36 @@ describe("buildFinalizePurchase (RF-017, D-001)", () => {
 			expect(patch.fields).toEqual({
 				removed_at: ts,
 				removed_reason: "purchased",
+				purchase_batch_id: batch,
 			});
+		}
+	});
+
+	it("todos los items del lote comparten el mismo purchase_batch_id", () => {
+		const patches = buildFinalizePurchase(["li-1", "li-2", "li-3"], ts, batch);
+		const batchIds = new Set(patches.map((p) => p.fields.purchase_batch_id));
+		expect(batchIds).toEqual(new Set([batch]));
+	});
+
+	it("con total: purchase_total viaja en cada parche del lote (backlog §6)", () => {
+		const patches = buildFinalizePurchase(["li-1", "li-2"], ts, batch, 57.3);
+		for (const patch of patches) {
+			expect(patch.fields).toEqual({
+				removed_at: ts,
+				removed_reason: "purchased",
+				purchase_batch_id: batch,
+				purchase_total: 57.3,
+			});
+		}
+	});
+
+	it("sin total (null / undefined): la clave purchase_total no aparece", () => {
+		for (const patches of [
+			buildFinalizePurchase(["li-1"], ts, batch),
+			buildFinalizePurchase(["li-1"], ts, batch, null),
+		]) {
+			expect(patches[0].fields).not.toHaveProperty("purchase_total");
+			expect(patches[0].fields.purchase_batch_id).toBe(batch);
 		}
 	});
 
@@ -94,27 +127,31 @@ describe("buildFinalizePurchase (RF-017, D-001)", () => {
 		// (li-9, aquí simulado) nunca entra en `itemIds`, así que nunca puede entrar en el lote --
 		// la exclusión es estructural, no una condición que se re-evalúe al confirmar.
 		const capturedAtClick = ["li-1"];
-		const patches = buildFinalizePurchase(capturedAtClick, ts);
+		const patches = buildFinalizePurchase(capturedAtClick, ts, batch);
 		expect(patches.map((p) => p.id)).not.toContain("li-9");
 		expect(patches).toHaveLength(1);
 	});
 
 	it("no produce ningún parche si no había nada marcado", () => {
-		expect(buildFinalizePurchase([], ts)).toEqual([]);
+		expect(buildFinalizePurchase([], ts, batch)).toEqual([]);
 	});
 });
 
 describe("buildUndoFinalize (D-032)", () => {
-	it("restaura exactamente el mismo conjunto de ids que se finalizó, poniendo removed_at a null", () => {
+	it("restaura los mismos ids poniendo removed_at, purchase_batch_id y purchase_total a null", () => {
 		const ts2 = "2026-09-06T10:05:00.000Z";
-		const finalizedIds = buildFinalizePurchase(["li-1", "li-2"], ts).map(
+		const finalizedIds = buildFinalizePurchase(["li-1", "li-2"], ts, batch).map(
 			(p) => p.id,
 		);
 		const patches = buildUndoFinalize(finalizedIds, ts2);
 
 		expect(patches.map((p) => p.id)).toEqual(["li-1", "li-2"]);
 		for (const patch of patches) {
-			expect(patch.fields).toEqual({ removed_at: null });
+			expect(patch.fields).toEqual({
+				removed_at: null,
+				purchase_batch_id: null,
+				purchase_total: null,
+			});
 			// El timestamp del deshacer es posterior al de la finalización: es lo que le hace ganar
 			// el LWW en sync_apply_list_item_patch (removed_at no es lápida absorbente, C-006).
 			expect(patch.ts > ts).toBe(true);

@@ -45,6 +45,9 @@ backups/
 *.tsbuildinfo
 .vite/
 
+# Tipos generados del esquema de Supabase (`pnpm gen:types`): regenerables, no se versionan.
+src/types/database.ts
+
 # Artefactos generados del canvas de diseño (regenerables con la skill de diseño)
 design/lista-de-mercado.html
 

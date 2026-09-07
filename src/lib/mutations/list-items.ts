@@ -36,6 +36,8 @@ export function buildAddToList(
 		updated_at: ts,
 		removed_at: null,
 		removed_reason: null,
+		purchase_batch_id: null,
+		purchase_total: null,
 		field_updated_at: { product_id: ts, quantity: ts, checked: ts },
 	};
 	const patch: SyncPatch = {
@@ -81,12 +83,21 @@ export function buildRemoveFromList(item: ListItem, ts: string): SyncPatch {
 export function buildFinalizePurchase(
 	itemIds: string[],
 	ts: string,
+	batchId: string,
+	total?: number | null,
 ): SyncPatch[] {
 	return itemIds.map((id) => ({
 		entity: "list_items" as const,
 		id,
 		ts,
-		fields: { removed_at: ts, removed_reason: "purchased" as const },
+		fields: {
+			removed_at: ts,
+			removed_reason: "purchased" as const,
+			purchase_batch_id: batchId,
+			// backlog §6: el total es opcional. Si no se registró, la clave no viaja en el parche
+			// (nada que fusionar), no se manda como null.
+			...(total != null ? { purchase_total: total } : {}),
+		},
 	}));
 }
 
@@ -100,7 +111,8 @@ export function buildUndoFinalize(itemIds: string[], ts: string): SyncPatch[] {
 		entity: "list_items" as const,
 		id,
 		ts,
-		fields: { removed_at: null },
+		// Un item resucitado no debe aparecer en el historial ni arrastrar un total.
+		fields: { removed_at: null, purchase_batch_id: null, purchase_total: null },
 	}));
 }
 
@@ -186,10 +198,12 @@ export function useListItemMutations(
 		return { product, item };
 	}
 
-	function finalizeSection(itemIds: string[]): void {
+	function finalizeSection(itemIds: string[], total?: number | null): void {
 		if (itemIds.length === 0) return;
 		const ts = new Date().toISOString();
-		const patches = buildFinalizePurchase(itemIds, ts);
+		// D-024: el id del lote se genera en el cliente, una vez por finalización.
+		const batchId = crypto.randomUUID();
+		const patches = buildFinalizePurchase(itemIds, ts, batchId, total);
 		patchListItems(patches);
 		sync.mutate(patches);
 	}
