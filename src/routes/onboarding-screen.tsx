@@ -1,0 +1,221 @@
+import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ensureAnonymousSession } from "@/lib/auth";
+import {
+	createHousehold as createHouseholdRpc,
+	joinHousehold as joinHouseholdRpc,
+} from "@/lib/household";
+import {
+	requestPersistentStorage,
+	setHouseholdLink,
+} from "@/lib/household-link";
+
+type Step =
+	| { kind: "choice" }
+	| { kind: "create" }
+	| { kind: "join" }
+	| { kind: "created"; name: string; joinCode: string };
+
+/**
+ * Primer uso (experiencia_usuario §10). Vive fuera de la barra de dos pestañas -- se guarda en
+ * `router.tsx` como su propia rama, sin `AppShell` -- porque hasta que el dispositivo tenga hogar
+ * no hay ni Mercado ni Catálogo que mostrar.
+ *
+ * `crear`/`unirse` llaman a `create_household`/`join_household` por RPC directo (`lib/household.ts`
+ * documenta por qué no pasan por la mutación de sincronización). Ninguna de las dos es optimista:
+ * son operaciones de una vez por dispositivo, no una de las tres frecuentes de RNF-001, así que un
+ * botón deshabilitado mientras se resuelve la llamada es aceptable aquí y en ningún otro sitio.
+ */
+export function OnboardingScreen() {
+	const navigate = useNavigate();
+	const [step, setStep] = useState<Step>({ kind: "choice" });
+	const [pending, setPending] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	async function finishLinking(household: {
+		householdId: string;
+		name: string;
+		joinCode: string;
+	}) {
+		setHouseholdLink(household);
+		// Fase 0 dejó pendiente esta llamada exactamente para "el momento de vincularse a un hogar"
+		// (crear o unirse): es aquí, y solo aquí, donde el dispositivo pasa a depender de que su
+		// almacenamiento local sobreviva (código de hogar, cola de sincronización).
+		await requestPersistentStorage();
+	}
+
+	async function handleCreate(formData: FormData) {
+		const name = String(formData.get("name") ?? "").trim();
+		if (!name) {
+			setError("Ponle un nombre al hogar.");
+			return;
+		}
+		setPending(true);
+		setError(null);
+		try {
+			// Idempotente y ya intentado una vez en `main.tsx` al arrancar: si aquella llamada de
+			// fondo todavía no terminó (o falló sin red y no había sesión previa), esta la repite
+			// y ahora sí se espera, porque create_household exige `auth.uid()` no nulo.
+			await ensureAnonymousSession();
+			const household = await createHouseholdRpc(name);
+			await finishLinking(household);
+			setStep({
+				kind: "created",
+				name: household.name,
+				joinCode: household.joinCode,
+			});
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "No se pudo crear el hogar.",
+			);
+		} finally {
+			setPending(false);
+		}
+	}
+
+	async function handleJoin(formData: FormData) {
+		const code = String(formData.get("code") ?? "")
+			.trim()
+			.toUpperCase();
+		if (!code) {
+			setError("Escribe el código del hogar.");
+			return;
+		}
+		setPending(true);
+		setError(null);
+		try {
+			await ensureAnonymousSession();
+			const household = await joinHouseholdRpc(code);
+			await finishLinking(household);
+			navigate({ to: "/" });
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "No se pudo unir al hogar.",
+			);
+		} finally {
+			setPending(false);
+		}
+	}
+
+	return (
+		<section className="flex min-h-dvh flex-col justify-center gap-6 px-4 py-6">
+			{step.kind === "choice" && (
+				<>
+					<h1 className="text-26 font-bold wdth-75">¿Empezamos?</h1>
+					<div className="flex flex-col gap-3">
+						<Button
+							className="min-h-[var(--min-height-tap)] w-full text-17"
+							onClick={() => setStep({ kind: "create" })}
+						>
+							Crear un hogar
+						</Button>
+						<Button
+							variant="outline"
+							className="min-h-[var(--min-height-tap)] w-full text-17"
+							onClick={() => setStep({ kind: "join" })}
+						>
+							Unirme con un código
+						</Button>
+					</div>
+				</>
+			)}
+
+			{step.kind === "create" && (
+				<form
+					className="flex flex-col gap-4"
+					onSubmit={(event) => {
+						event.preventDefault();
+						void handleCreate(new FormData(event.currentTarget));
+					}}
+				>
+					<h1 className="text-26 font-bold wdth-75">Nombra tu hogar</h1>
+					<Input
+						name="name"
+						placeholder="Nombre del hogar"
+						autoFocus
+						disabled={pending}
+					/>
+					{error && (
+						<p role="alert" className="text-14 text-destructive">
+							{error}
+						</p>
+					)}
+					<Button
+						type="submit"
+						disabled={pending}
+						className="min-h-[var(--min-height-tap)] w-full text-17"
+					>
+						Crear
+					</Button>
+				</form>
+			)}
+
+			{step.kind === "join" && (
+				<form
+					className="flex flex-col gap-4"
+					onSubmit={(event) => {
+						event.preventDefault();
+						void handleJoin(new FormData(event.currentTarget));
+					}}
+				>
+					<h1 className="text-26 font-bold wdth-75">Código del hogar</h1>
+					<Input
+						name="code"
+						placeholder="CÓDIGO"
+						autoFocus
+						disabled={pending}
+						autoCapitalize="characters"
+						autoCorrect="off"
+						autoComplete="off"
+						spellCheck={false}
+						className="text-center uppercase tracking-widest"
+					/>
+					{error && (
+						<p role="alert" className="text-14 text-destructive">
+							{error}
+						</p>
+					)}
+					<Button
+						type="submit"
+						disabled={pending}
+						className="min-h-[var(--min-height-tap)] w-full text-17"
+					>
+						Unirme
+					</Button>
+				</form>
+			)}
+
+			{step.kind === "created" && (
+				<div className="flex flex-col gap-4">
+					<h1 className="text-26 font-bold wdth-75">{step.name}</h1>
+					<p className="text-14 text-muted-foreground">
+						Este es el código de tu hogar. Sirve para unir el otro dispositivo y
+						para recuperar el acceso si reinstalas la app. Lo encuentras siempre
+						en Ajustes.
+					</p>
+					<div className="flex items-center justify-between border border-border px-4 py-3">
+						<span className="text-20 font-bold tracking-widest">
+							{step.joinCode}
+						</span>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => navigator.clipboard?.writeText(step.joinCode)}
+						>
+							Copiar
+						</Button>
+					</div>
+					<Button
+						type="button"
+						className="min-h-[var(--min-height-tap)] w-full text-17"
+						onClick={() => navigate({ to: "/" })}
+					>
+						Continuar
+					</Button>
+				</div>
+			)}
+		</section>
+	);
+}

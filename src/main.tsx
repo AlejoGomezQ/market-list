@@ -3,6 +3,16 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
+import { ensureAnonymousSession } from "./lib/auth.ts";
+
+// RF-022/D-020: sin esto no hay `auth.uid()` con el que `is_member()` (RLS) o `create_household`/
+// `join_household` puedan trabajar. Sin esperar (no bloquea el primer render, D-016/local-first: la
+// interfaz nunca depende de la red para aparecer) -- el propio Onboarding vuelve a esperar esta
+// misma función antes de llamar a create_household/join_household (`onboarding-screen.tsx`), que
+// es el único punto donde de verdad hace falta que ya exista sesión.
+void ensureAnonymousSession().catch((error) => {
+	console.error("No se pudo iniciar la sesión anónima:", error);
+});
 
 // registerType: 'prompt' (vite.config.ts): no autoUpdate, así que el nuevo
 // service worker queda esperando hasta que se le avise al usuario. Por ahora
