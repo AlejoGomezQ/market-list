@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { OnboardingSupermarkets } from "@/components/onboarding/onboarding-supermarkets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ensureAnonymousSession } from "@/lib/auth";
@@ -16,7 +17,8 @@ type Step =
 	| { kind: "choice" }
 	| { kind: "create" }
 	| { kind: "join" }
-	| { kind: "created"; name: string; joinCode: string };
+	| { kind: "created"; name: string; joinCode: string; householdId: string }
+	| { kind: "supermarkets"; householdId: string };
 
 /**
  * Primer uso (experiencia_usuario §10). Vive fuera de la barra de dos pestañas -- se guarda en
@@ -66,6 +68,7 @@ export function OnboardingScreen() {
 				kind: "created",
 				name: household.name,
 				joinCode: household.joinCode,
+				householdId: household.householdId,
 			});
 		} catch (err) {
 			setError(
@@ -214,11 +217,23 @@ export function OnboardingScreen() {
 					<Button
 						type="button"
 						className="min-h-[var(--min-height-tap)] w-full text-17"
-						onClick={() => navigate({ to: "/" })}
+						onClick={() =>
+							setStep({
+								kind: "supermarkets",
+								householdId: step.householdId,
+							})
+						}
 					>
 						Continuar
 					</Button>
 				</div>
+			)}
+
+			{step.kind === "supermarkets" && (
+				<OnboardingSupermarkets
+					householdId={step.householdId}
+					onDone={() => navigate({ to: "/" })}
+				/>
 			)}
 		</section>
 	);
