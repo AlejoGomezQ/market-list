@@ -1,5 +1,5 @@
-import { cn } from "cn";
 import type * as React from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Sin capa de aspecto propia de shadcn (D-038): solo los tokens ya fijados en `index.css`. Área de

@@ -28,7 +28,7 @@ export function BottomNav() {
 				<Link
 					key={to}
 					to={to}
-					className="flex min-h-[var(--min-height-tap)] flex-1 flex-col items-center justify-center gap-0.5"
+					className="flex min-h-[var(--min-height-tap)] flex-1 flex-col items-center gap-0.5 pt-2.5"
 					activeProps={{ className: "text-foreground" }}
 					inactiveProps={{ className: "text-muted-foreground" }}
 					activeOptions={{ exact: to === "/" }}

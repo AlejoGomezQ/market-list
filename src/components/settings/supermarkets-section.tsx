@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { cn } from "cn";
 import { Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ import {
 	supermarketsQuery,
 } from "@/lib/queries/household-tables";
 import { nextPosition, supermarketColorClass } from "@/lib/selectors";
+import { cn } from "@/lib/utils";
 import type { Supermarket } from "@/schemas/domain";
 import { nameFieldSchema } from "@/schemas/forms";
 

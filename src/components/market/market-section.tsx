@@ -1,10 +1,10 @@
-import { cn } from "cn";
 import { Check, ChevronDown } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRowFlip } from "@/components/market/use-row-flip";
 import { QuantityControl } from "@/components/quantity-control";
 import { Button } from "@/components/ui/button";
 import { splitByChecked, supermarketColorClass } from "@/lib/selectors";
+import { cn } from "@/lib/utils";
 import type { ListItem, Product, Supermarket } from "@/schemas/domain";
 
 interface MarketSectionProps {

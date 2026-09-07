@@ -1,4 +1,3 @@
-import { cn } from "cn";
 import { Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import {
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { findSimilarProduct } from "@/lib/selectors";
+import { cn } from "@/lib/utils";
 import type {
 	Category,
 	ListItem,
