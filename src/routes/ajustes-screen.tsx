@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CategoriesSection } from "@/components/settings/categories-section";
+import { CopyCatalogDrawer } from "@/components/settings/copy-catalog-drawer";
 import { SupermarketsSection } from "@/components/settings/supermarkets-section";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +64,7 @@ export function AjustesDrawer() {
 	const [leaveOpen, setLeaveOpen] = useState(false);
 	const [leavePending, setLeavePending] = useState(false);
 	const [leaveError, setLeaveError] = useState<string | null>(null);
+	const [copyOpen, setCopyOpen] = useState(false);
 
 	const activeId = link?.householdId ?? null;
 
@@ -238,6 +240,14 @@ export function AjustesDrawer() {
 							>
 								Añadir otro hogar
 							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setCopyOpen(true)}
+								className="min-h-[var(--min-height-tap)] self-start"
+							>
+								Copiar catálogo de otro hogar
+							</Button>
 						</section>
 
 						<div className="border-t border-border pt-4">
@@ -378,6 +388,8 @@ export function AjustesDrawer() {
 					</DrawerFooter>
 				</DrawerContent>
 			</Drawer>
+
+			<CopyCatalogDrawer open={copyOpen} onOpenChange={setCopyOpen} />
 		</>
 	);
 }

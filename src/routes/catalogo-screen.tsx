@@ -7,6 +7,7 @@ import {
 	type ProductDrawerState,
 } from "@/components/catalog/product-drawer";
 import { QuantityControl } from "@/components/quantity-control";
+import { CopyCatalogDrawer } from "@/components/settings/copy-catalog-drawer";
 import { Input } from "@/components/ui/input";
 import { getHouseholdLink } from "@/lib/household-link";
 import { useListItemMutations } from "@/lib/mutations/list-items";
@@ -57,6 +58,7 @@ export function CatalogoScreen() {
 	const [search, setSearch] = useState("");
 	const [categoryId, setCategoryId] = useState<string | null>(null);
 	const [drawer, setDrawer] = useState<ProductDrawerState | null>(null);
+	const [copyOpen, setCopyOpen] = useState(false);
 
 	const liveProducts = useMemo(
 		() => products.filter((p) => p.deleted_at === null),
@@ -200,9 +202,18 @@ export function CatalogoScreen() {
 
 			<div className="min-h-0 flex-1 overflow-y-auto pb-24">
 				{liveProducts.length === 0 ? (
-					<p className="px-8 pt-16 text-center text-20 font-bold text-foreground wdth-75">
-						Añade lo que sueles comprar.
-					</p>
+					<div className="flex flex-col items-center gap-4 px-8 pt-16 text-center">
+						<p className="text-20 font-bold text-foreground wdth-75">
+							Añade lo que sueles comprar.
+						</p>
+						<button
+							type="button"
+							onClick={() => setCopyOpen(true)}
+							className="min-h-[var(--min-height-tap)] text-14 text-muted-foreground underline underline-offset-4"
+						>
+							o copia el catálogo de otro hogar
+						</button>
+					</div>
 				) : sections.length === 0 ? (
 					<p className="px-4 pt-4 text-14 text-muted-foreground">
 						{search.trim()
@@ -338,6 +349,8 @@ export function CatalogoScreen() {
 				onDelete={handleDelete}
 				onGoToSimilar={(product) => setDrawer({ mode: "edit", product })}
 			/>
+
+			<CopyCatalogDrawer open={copyOpen} onOpenChange={setCopyOpen} />
 
 			<Outlet />
 		</section>
