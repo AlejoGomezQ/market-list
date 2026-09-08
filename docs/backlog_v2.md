@@ -94,8 +94,6 @@ literalmente *"para sembrar el historial de V2 sin tabla adicional"*.
 - Sin tabla `purchases`: el lote vive en columnas de `list_items` (`purchase_batch_id`,
   `purchase_total`).
 
-Habilita más adelante las sugerencias automáticas ("no compras café hace tres semanas").
-
 ## 6. Total gastado por compra — implementado en `feature/historial-compras`
 
 Al finalizar una compra (el drawer de confirmación en `src/routes/mercado-screen.tsx`), un campo
