@@ -72,6 +72,25 @@ function isNetworkError(error: unknown): boolean {
 }
 
 /**
+ * Un `raise exception` propio de una función SQL de onboarding (`join_household`, `create_household`,
+ * `regenerate_household_code`) llega desde PostgREST como `{ message, code, details, hint }` -- en
+ * supabase-js reciente `PostgrestError extends Error`, así que basta comprobar la forma. El SQLSTATE
+ * por defecto de `raise exception` es `P0001`.
+ */
+export function isPostgresRaise(
+	error: unknown,
+): error is { message: string; code: string } {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		"message" in error &&
+		(error as { code: unknown }).code === "P0001" &&
+		typeof (error as { message: unknown }).message === "string"
+	);
+}
+
+/**
  * Frase para el usuario. El orden importa: primero las clases que conocemos, y solo al final el
  * genérico -- nunca se deja escapar el `.message` de una excepción cualquiera.
  */
@@ -97,6 +116,14 @@ export function toUserMessage(error: unknown): string {
 	}
 	if (isNetworkError(error)) {
 		return "Sin conexión. Se guardó en el dispositivo y se sube cuando vuelva la red.";
+	}
+	if (isPostgresRaise(error)) {
+		if (/demasiados intentos/i.test(error.message)) {
+			return "Demasiados intentos. Espera un momento antes de volver a probar.";
+		}
+		// Otro `raise exception` propio: un poco más útil que el genérico, sin soltar el texto crudo
+		// (lleva el nombre de la función SQL y no ayuda a nadie).
+		return "No se pudo completar la operación. Revisa los datos e inténtalo de nuevo.";
 	}
 	return GENERIC_MESSAGE;
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AppError } from "@/lib/errors";
+import { AppError, isPostgresRaise } from "@/lib/errors";
 import { supabase, supabaseConfigError } from "@/lib/supabase";
 
 /**
@@ -69,7 +69,17 @@ export async function createHousehold(name: string): Promise<CreatedHousehold> {
 export async function joinHousehold(code: string): Promise<CreatedHousehold> {
 	const client = requireSupabase();
 	const { data, error } = await client.rpc("join_household", { p_code: code });
-	if (error) throw error;
+	if (error) {
+		// El límite de intentos (household_join_attempts, arquitectura §5) es un mensaje esperado,
+		// no un fallo que investigar: se relanza como AppError para que onboarding lo muestre tal
+		// cual y `reportError` no lo mande a Sentry.
+		if (isPostgresRaise(error) && /demasiados intentos/i.test(error.message)) {
+			throw new AppError(
+				"Demasiados intentos. Espera un momento antes de volver a probar.",
+			);
+		}
+		throw error;
+	}
 	const result = joinHouseholdResultSchema.parse(data);
 	if (!result.joined) {
 		throw new AppError("Ese código no corresponde a ningún hogar.");
