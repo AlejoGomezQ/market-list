@@ -115,22 +115,28 @@ Historial (punto 5), cada compra muestra su total.
   de solo lectura (YAGNI). Editarlo después (corregir una cifra mal tecleada, o añadirla a una
   compra que se cerró sin total) es la extensión natural.
 
-## 7. Errores legibles para el usuario + seguimiento interno de logs
+## 7. Errores legibles para el usuario + seguimiento interno de logs — implementado en `feature/sentry`
 
 Hoy algunos fallos enseñan el texto crudo de la excepción al usuario. Un ejemplo real: cuando
 IndexedDB falla al abrir una transacción, llega a pantalla algo como
-`Failed to execute 'transaction' on 'IDBDatabase': ...`. CLAUDE.md ya fija que nada se revierte solo
-y que una mutación en cuarentena se avisa (experiencia_usuario §9); falta que ese aviso esté
-**escrito para una persona**, no volcado desde el motor.
+`Failed to execute 'transaction' on 'IDBDatabase': ...`.
 
-**Toca:**
+**Lo que se hizo:**
 
-- Una capa de traducción de errores: del error técnico (excepción de IndexedDB, error de Supabase,
-  fallo de red) a un mensaje en español con el tono de `identidad_visual §8` — qué pasó y qué hacer,
-  sin disculparse, sin jerga. Ej. "No se pudo guardar en este dispositivo. Cierra y vuelve a abrir
-  la app." en vez del `Failed to execute 'transaction'…`.
-- El detalle técnico (stack, mensaje original, contexto) se manda a un **sistema de seguimiento de
-  errores interno** para poder depurar sin pedirle al usuario que lea la consola. La tecnología está
-  por decidir (Sentry u otra); el presupuesto cero (D-018) condiciona la elección.
-- Extiende lo que CLAUDE.md dice sobre la cuarentena de mutaciones: la franja roja tocable
-  (experiencia_usuario §9) muestra el mensaje legible; el reporte interno lleva el resto.
+- `src/lib/errors.ts`: `toUserMessage(error)` traduce la excepción a una frase en español con el
+  tono de `identidad_visual §8` (IndexedDB, error de Supabase, red, Zod, `SyncError`/`SyncConfigError`);
+  nunca deja escapar el `.message` crudo. `AppError` marca los mensajes que YA están escritos para el
+  usuario (p. ej. "Ese código no corresponde a ningún hogar.") y pasan tal cual.
+- `reportError` / `reportEvent` mandan el detalle técnico a **Sentry** (elegido por su capa gratis:
+  5k errores/mes, sin tarjeta — encaja con D-018). Se inicializa solo si `VITE_SENTRY_DSN` está
+  presente (entorno de producción de Vercel); en local y en los tests no se activa.
+- Cableado: los `catch` de onboarding, salir del hogar y regenerar código; el arranque de
+  `main.tsx`; un parche que entra en cuarentena (`sync/quarantine.ts`); y un `Sentry.ErrorBoundary`
+  alrededor de toda la app con `AppErrorFallback`.
+- Source maps: `@sentry/vite-plugin` los sube desde el build de Vercel cuando hay `SENTRY_AUTH_TOKEN`.
+
+**Pendiente / abierto:**
+
+- Reglas de alerta y scrubbing más fino en Sentry (por ahora solo `sendDefaultPii: false`).
+- Mapear códigos concretos de PostgREST (p. ej. el límite de intentos de `join_household`) a
+  mensajes propios; hoy caen al genérico.

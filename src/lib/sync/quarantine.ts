@@ -1,4 +1,5 @@
 import { get as idbGet, set as idbSet } from "idb-keyval";
+import { reportEvent } from "@/lib/errors";
 import { queueStore } from "@/lib/sync/idb-stores";
 import type { SyncPatch } from "@/schemas/patch";
 
@@ -55,10 +56,21 @@ export async function loadQuarantine(): Promise<QuarantinedPatch[]> {
  * sentido que un solo parche roto cuente dos veces.
  */
 export async function addToQuarantine(entry: QuarantinedPatch): Promise<void> {
+	const isRetry = snapshot.some((e) => e.patch.id === entry.patch.id);
 	snapshot = [
 		...snapshot.filter((existing) => existing.patch.id !== entry.patch.id),
 		entry,
 	];
 	notify();
 	await idbSet(QUARANTINE_KEY, snapshot, queueStore);
+	// Un parche que `sync_push` rechaza de forma permanente es un fallo real que hay que mirar
+	// (backlog_v2 §7). Solo al entrar por primera vez, no en cada reintento idempotente.
+	if (!isRetry) {
+		reportEvent(`sync_push: parche en cuarentena (${entry.patch.entity})`, {
+			entity: entry.patch.entity,
+			patchId: entry.patch.id,
+			fields: Object.keys(entry.patch.fields),
+			reason: entry.reason,
+		});
+	}
 }

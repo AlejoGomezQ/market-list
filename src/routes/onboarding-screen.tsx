@@ -4,6 +4,7 @@ import { OnboardingSupermarkets } from "@/components/onboarding/onboarding-super
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ensureAnonymousSession } from "@/lib/auth";
+import { AppError, reportError } from "@/lib/errors";
 import {
 	createHousehold as createHouseholdRpc,
 	joinHousehold as joinHouseholdRpc,
@@ -72,8 +73,11 @@ export function OnboardingScreen() {
 				householdId: household.householdId,
 			});
 		} catch (err) {
+			reportError(err, { op: "create_household" });
 			setError(
-				err instanceof Error ? err.message : "No se pudo crear el hogar.",
+				err instanceof AppError
+					? err.message
+					: "No se pudo crear el hogar. Revisa tu conexión e inténtalo otra vez.",
 			);
 		} finally {
 			setPending(false);
@@ -96,8 +100,11 @@ export function OnboardingScreen() {
 			await finishLinking(household);
 			navigate({ to: "/" });
 		} catch (err) {
+			reportError(err, { op: "join_household" });
 			setError(
-				err instanceof Error ? err.message : "No se pudo unir al hogar.",
+				err instanceof AppError
+					? err.message
+					: "No se pudo unir al hogar. Revisa tu conexión e inténtalo otra vez.",
 			);
 		} finally {
 			setPending(false);

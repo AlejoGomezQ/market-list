@@ -13,6 +13,7 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from "@/components/ui/drawer";
+import { reportError, toUserMessage } from "@/lib/errors";
 import { leaveHousehold, regenerateHouseholdCode } from "@/lib/household";
 import {
 	clearHouseholdLink,
@@ -66,9 +67,8 @@ export function AjustesDrawer() {
 			setLink((current) => (current ? { ...current, joinCode } : current));
 			setConfirmOpen(false);
 		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "No se pudo regenerar el código.",
-			);
+			reportError(err, { op: "regenerate_household_code" });
+			setError(toUserMessage(err));
 		} finally {
 			setPending(false);
 		}
@@ -87,10 +87,10 @@ export function AjustesDrawer() {
 			// lleva a onboarding. No se restablece leavePending: la página se va.
 			window.location.assign("/");
 		} catch (err) {
-			// El texto crudo de la excepción (p. ej. un error de IndexedDB) no le sirve a nadie de
-			// pie en un pasillo: mensaje fijo en español (identidad_visual §8, backlog_v2 §7).
-			console.error("No se pudo salir del hogar", err);
-			setLeaveError("No se pudo salir del hogar. Inténtalo de nuevo.");
+			// El texto crudo de la excepción no le sirve a nadie de pie en un pasillo: el detalle va
+			// a Sentry, el usuario ve una frase (identidad_visual §8, backlog_v2 §7).
+			reportError(err, { op: "leave_household" });
+			setLeaveError(toUserMessage(err));
 			setLeavePending(false);
 		}
 	}

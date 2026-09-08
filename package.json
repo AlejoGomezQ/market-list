@@ -18,6 +18,7 @@
 		"export:data": "supabase db dump --data-only --linked -f backups/household-data.sql"
 	},
 	"dependencies": {
+		"@sentry/react": "^10",
 		"@supabase/supabase-js": "^2.115.0",
 		"@tanstack/query-async-storage-persister": "^5.102.8",
 		"@tanstack/query-persist-client-core": "^5.102.8",
@@ -37,6 +38,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.5.12",
 		"@playwright/test": "^1.63.0",
+		"@sentry/vite-plugin": "^4",
 		"@tailwindcss/vite": "4.3.3",
 		"@testing-library/jest-dom": "^7.0.1",
 		"@testing-library/react": "^16.3.3",

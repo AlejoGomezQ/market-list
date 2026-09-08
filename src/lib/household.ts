@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AppError } from "@/lib/errors";
 import { supabase, supabaseConfigError } from "@/lib/supabase";
 
 /**
@@ -71,7 +72,7 @@ export async function joinHousehold(code: string): Promise<CreatedHousehold> {
 	if (error) throw error;
 	const result = joinHouseholdResultSchema.parse(data);
 	if (!result.joined) {
-		throw new Error("Código inválido.");
+		throw new AppError("Ese código no corresponde a ningún hogar.");
 	}
 	return {
 		householdId: result.household_id,
