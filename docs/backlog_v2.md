@@ -11,40 +11,51 @@ lista canónica de lo descartado.
 
 ---
 
-## 1. Pertenecer a más de un hogar y cambiar entre ellos
+## 1. Pertenecer a más de un hogar y cambiar entre ellos — implementado en `feature/multi-hogar-y-copia-catalogo`
 
-Hoy un dispositivo pertenece a **un solo hogar**: `src/lib/household-link.ts` guarda un único
-vínculo en `localStorage`, y `regenerate_household_code` / `leave_household` derivan el hogar del
-llamador con `where user_id = auth.uid()` sin recibir un `household_id`. El modelo de datos
-(`household_members`) ya admite que un mismo usuario anónimo sea miembro de varios hogares; el
-trabajo es de cliente y de firmas de RPC, no de esquema.
+Caso: una persona con su hogar y, además, el de sus papás o el de una casa compartida.
 
-**Toca:**
+**Lo que se hizo** (diseño en `plan_multi_hogar_y_copia_catalogo_v0.1.md`, decisiones D-043…D-048,
+D-053):
 
-- El vínculo local pasa a ser una **lista** de hogares más cuál está activo.
-- Un **selector de hogar** (¿en Ajustes? ¿en la cabecera de Mercado?). El onboarding deja de ser
-  solo "crear o unirse" y suma "añadir otro hogar" para quien ya tiene uno.
-- Las cuatro consultas persistidas ya llevan `householdId` en la clave, así que las cachés por
-  hogar salen casi gratis. El motor de sincronización (`src/lib/sync/engine.ts`, `realtime.ts`)
-  tiene que decidir si opera solo sobre el hogar activo o sobre todos a la vez.
-- `regenerate_household_code` y `leave_household` reciben un `household_id` explícito (hoy asumen
-  uno solo).
+- El vínculo de `localStorage` pasa de un objeto a `{ households: HouseholdLink[], activeId }`, con
+  migración transparente del formato viejo al leer. `getHouseholdLink()` mantiene la firma y devuelve
+  el activo, así que los ~8 llamadores no se tocaron (D-043).
+- **Selector de hogar en Ajustes**, como primera sección — no en la cabecera de Mercado (D-045).
+  Onboarding suma el modo `/onboarding?add=true` para "añadir otro hogar" a quien ya tiene uno
+  (D-046).
+- La sincronización opera **solo sobre el hogar activo** (D-044). El cursor del delta pull pasa a
+  `sync:cursor:<householdId>:<entity>`. Cambiar de hogar recarga la app.
+- `regenerate_household_code` y `leave_household` reciben `p_household_id` y validan `is_member`
+  (D-048). Nueva `list_households()` como fuente de verdad del selector; al abrir Ajustes se
+  reconcilia con ella y se podan los hogares de los que te expulsaron, con aviso (D-053).
+- Salir de un hogar con otros pendientes hace limpieza selectiva de su caché y cursores, no la global
+  (D-047).
 
-## 2. Copiar el catálogo de productos de un hogar a otro
+Lo que quedó fuera y se aborda aparte: volver a entrar a un hogar sin perder nada tras
+salir/reinstalar (§8), y roles de hogar (§9).
 
-Caso: una familia nueva quiere **partir del catálogo de otro hogar** en vez de dar de alta ~100
-productos a mano. Se copian los productos —y, si se decide, las categorías y supermercados a los
-que apuntan— con identificadores nuevos (`crypto.randomUUID()`, D-024), remapeando `category_id` y
-`supermarket_id`. No se copian los items de lista (son de la ocasión, no del catálogo) ni las
-lápidas.
+## 2. Copiar el catálogo de productos de un hogar a otro — implementado en `feature/multi-hogar-y-copia-catalogo`
 
-**Preguntas abiertas:**
+Caso: una familia nueva parte del catálogo de otro hogar en vez de dar de alta ~100 productos a mano.
 
-- ¿Una RPC `copy_catalog(origen, destino)` con `is_member()` sobre ambos hogares (una sola
-  transacción), o el cliente hace las escrituras por `sync_push` (respeta la costura, pero son
-  cien y pico parches)?
-- ¿Se copian solo productos, o también las categorías y los supermercados propios del origen?
-- Depende de poder introducir el código del hogar origen (relacionado con el punto 1).
+**Lo que se hizo** (decisiones D-049…D-052):
+
+- RPC `copy_catalog(origen, destino, copiar_supermercados, copiar_categorias)`, `security definer`,
+  con `is_member` sobre **ambos** hogares, todo en una transacción — no ~100 parches por `sync_push`
+  (D-049). Es una excepción acotada a D-039, con el precedente de la siembra de categorías de
+  `create_household`.
+- Copia productos activos y, según los dos flags, sus categorías y supermercados. Categorías y
+  supermercados se emparejan con los del destino por nombre; los que faltan se crean con id nuevo. Un
+  producto cuyo `(nombre, marca)` ya exista en el destino se omite — resuelve D-006 en masa. No copia
+  items de lista ni lápidas. Idempotente (D-050). El color sale del orden `position`, no se copia
+  (D-052).
+- Para copiar hay que ser miembro del origen: la feature se apoya en "añadir otro hogar" (§1) para la
+  entrada del código y solo añade un selector de origen y la llamada (D-051).
+- UI: drawer `CopyCatalogDrawer` con selector de origen, dos casillas (categorías / supermercados),
+  guardia de conexión y resultado "Catálogo copiado · N productos". Entradas desde Ajustes y desde el
+  estado vacío del Catálogo. Tras copiar, un delta pull forzado repinta Mercado y Catálogo sin
+  recargar.
 
 ## 3. Compartir la lista de un supermercado a WhatsApp
 
