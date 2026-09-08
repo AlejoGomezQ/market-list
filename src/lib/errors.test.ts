@@ -49,6 +49,26 @@ describe("toUserMessage", () => {
 		);
 	});
 
+	it("el rate limit de join_household (P0001) dice esperar antes de reintentar", () => {
+		const err = {
+			message: "join_household: demasiados intentos, espera unos minutos",
+			code: "P0001",
+			details: "",
+			hint: "",
+		};
+		expect(toUserMessage(err)).toMatch(/demasiados intentos/i);
+	});
+
+	it("otro raise exception propio (P0001) da un mensaje útil sin el texto crudo", () => {
+		const err = {
+			message: "create_household: el nombre del hogar no puede estar vacío",
+			code: "P0001",
+		};
+		const msg = toUserMessage(err);
+		expect(msg).not.toMatch(/create_household/);
+		expect(msg).toMatch(/inténtalo de nuevo/i);
+	});
+
 	it("cualquier otra cosa cae al mensaje genérico, nunca al .message crudo", () => {
 		expect(
 			toUserMessage(

@@ -116,6 +116,25 @@ export function buildUndoFinalize(itemIds: string[], ts: string): SyncPatch[] {
 	}));
 }
 
+/**
+ * Editar el total de una compra ya finalizada desde el Historial (backlog §6): corregir una cifra
+ * mal tecleada o añadirla a una compra que se cerró sin ella. Un parche por lápida del lote con el
+ * mismo `purchase_total` (así queda repetido en todas, como al finalizar); `null` lo borra. La
+ * columna tiene `check (>= 0)` en la BD -- la UI solo deja teclear dígitos.
+ */
+export function buildSetPurchaseTotal(
+	itemIds: string[],
+	ts: string,
+	total: number | null,
+): SyncPatch[] {
+	return itemIds.map((id) => ({
+		entity: "list_items" as const,
+		id,
+		ts,
+		fields: { purchase_total: total },
+	}));
+}
+
 export function useListItemMutations(
 	householdId: string,
 	queryClient: QueryClient,
@@ -208,6 +227,15 @@ export function useListItemMutations(
 		sync.mutate(patches);
 	}
 
+	/** backlog §6: fijar o borrar (`null`) el total de una compra del historial. Optimista, sin spinner. */
+	function setPurchaseTotal(itemIds: string[], total: number | null): void {
+		if (itemIds.length === 0) return;
+		const ts = new Date().toISOString();
+		const patches = buildSetPurchaseTotal(itemIds, ts, total);
+		patchListItems(patches);
+		sync.mutate(patches);
+	}
+
 	function undoFinalize(itemIds: string[]): void {
 		if (itemIds.length === 0) return;
 		const ts = new Date().toISOString();
@@ -222,6 +250,7 @@ export function useListItemMutations(
 		removeFromList,
 		createAndAddToList,
 		finalizeSection,
+		setPurchaseTotal,
 		undoFinalize,
 	};
 }
