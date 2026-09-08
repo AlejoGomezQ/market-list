@@ -66,9 +66,18 @@ export const queryClient = createSyncQueryClient();
  * este dispositivo no debe conservar nada del catálogo ni de la lista. `ajustes-screen.tsx` recarga
  * la app entera justo después -- el resto del estado vivo (QueryClient en memoria, motor de sync,
  * suscripción de la cola de `main.tsx`) solo se limpia de verdad volviendo a arrancar.
+ *
+ * Cada `clear` va envuelto y absorbido con `allSettled`: si un almacén todavía no existe (nunca se
+ * le escribió en esta instalación) o IndexedDB ni siquiera está disponible, la llamada lanza --
+ * incluso de forma síncrona, de ahí el `async` envolvente que la convierte en promesa rechazada --
+ * y salir del hogar no debe reventar con un error crudo de IndexedDB por eso: no hay nada que
+ * borrar ahí de todas formas.
  */
 export async function clearPersistedSyncState(): Promise<void> {
-	await Promise.all([idbClear(cacheStore), idbClear(queueStore)]);
+	const clearStore = async (store: typeof cacheStore) => {
+		await idbClear(store);
+	};
+	await Promise.allSettled([clearStore(cacheStore), clearStore(queueStore)]);
 }
 
 /**
@@ -109,8 +118,9 @@ function isPersistedTableQuery(query: Query): boolean {
  * `shouldDehydrateQuery`, así que `shouldDehydrateMutation` caía al default de la librería
  * (`defaultShouldDehydrateMutation`, que persiste toda mutación pausada) y la cola de salida
  * viajaba dentro de la misma clave `market-list-cache` que la caché desechable. Ahora son dos
- * `Persister` independientes, cada uno con su propio *object store* (`sync/idb-stores.ts`), su
- * propio `buster` y cada uno vetando explícitamente lo que no es suyo -- no basta con que uno filtre
+ * `Persister` independientes, cada uno con su propia base de datos de IndexedDB
+ * (`sync/idb-stores.ts`), su propio `buster` y cada uno vetando explícitamente lo que no es suyo --
+ * no basta con que uno filtre
  * lo que sí persiste, si el otro se queda con el default también persistiría lo mismo dos veces.
  *
  * `PersistQueryClientProvider` (`App.tsx`) solo acepta un `Persister`, así que se le da el de la
@@ -158,6 +168,12 @@ export const persistOptions: OmitKeyof<
  * enviar". Versionado independiente (D-030): una subida de `buster` en la caché de consultas no
  * debe poder llevarse por delante cambios sin enviar, así que este `buster` es su propia constante,
  * no la misma que la de arriba aunque hoy compartan el mismo valor.
+ *
+ * Sigue en "v1" pese al cambio de `sync/idb-stores.ts` a una base por almacén: la base
+ * `market-list-queue` es nueva y arranca vacía, así que la restauración ya empieza limpia sin
+ * necesidad de tocar el `buster`. El coste es que cualquier parche que quedara sin enviar en la
+ * base vieja compartida se queda ahí (inalcanzable) -- aceptable porque ese almacén no se creaba de
+ * forma fiable de todos modos (el bug que arregla este lote).
  */
 export const queuePersistOptions: OmitKeyof<
 	PersistQueryClientOptions,
