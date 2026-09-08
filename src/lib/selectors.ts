@@ -236,6 +236,8 @@ export interface PurchaseHistoryGroup {
 	supermarket: Supermarket | null;
 	/** Total de la compra si se registró al finalizar (backlog §6); leído, no sumado. */
 	total: number | null;
+	/** Ids de todas las lápidas del lote: los que hay que parchear para editar el total. */
+	itemIds: string[];
 	entries: Array<{ product: Product; quantity: number }>;
 }
 
@@ -308,6 +310,7 @@ export function groupPurchaseHistory(
 			purchasedAt: group.purchasedAt,
 			supermarket,
 			total: group.total,
+			itemIds: group.items.map((item) => item.id),
 			entries,
 		});
 	}

@@ -362,6 +362,7 @@ describe("groupPurchaseHistory", () => {
 		const groups = groupPurchaseHistory(items, [leche, pan], [sm]);
 		expect(groups).toHaveLength(1);
 		expect(groups[0].batchId).toBe("batch-1");
+		expect([...groups[0].itemIds].sort()).toEqual(["li-1", "li-2"]);
 		expect(groups[0].supermarket?.name).toBe("Supermu");
 		expect(
 			groups[0].entries.map((e) => `${e.product.name} x${e.quantity}`).sort(),
@@ -423,6 +424,9 @@ describe("groupPurchaseHistory", () => {
 		];
 		const groups = groupPurchaseHistory(items, [leche], [sm]);
 		expect(groups[0].entries.map((e) => e.product.name)).toEqual(["Leche"]);
+		// itemIds abarca TODAS las lápidas del lote aunque su producto ya no esté: al editar el
+		// total hay que parchearlas todas, no solo las que se pintan.
+		expect([...groups[0].itemIds].sort()).toEqual(["li-1", "li-2"]);
 	});
 
 	it('puts a group with no live supermarket in "Sin asignar"', () => {

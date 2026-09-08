@@ -4,6 +4,7 @@ import {
 	buildAddToList,
 	buildFinalizePurchase,
 	buildRemoveFromList,
+	buildSetPurchaseTotal,
 	buildSetQuantity,
 	buildUndoFinalize,
 } from "./list-items";
@@ -134,6 +135,29 @@ describe("buildFinalizePurchase (RF-017, D-001)", () => {
 
 	it("no produce ningún parche si no había nada marcado", () => {
 		expect(buildFinalizePurchase([], ts, batch)).toEqual([]);
+	});
+});
+
+describe("buildSetPurchaseTotal (backlog §6)", () => {
+	it("pone el mismo purchase_total en cada lápida del lote", () => {
+		const patches = buildSetPurchaseTotal(["li-1", "li-2", "li-3"], ts, 85400);
+		expect(patches.map((p) => p.id)).toEqual(["li-1", "li-2", "li-3"]);
+		for (const patch of patches) {
+			expect(patch.entity).toBe("list_items");
+			expect(patch.ts).toBe(ts);
+			expect(patch.fields).toEqual({ purchase_total: 85400 });
+		}
+	});
+
+	it("con null limpia el total (compra cerrada por error con cifra)", () => {
+		const patches = buildSetPurchaseTotal(["li-1", "li-2"], ts, null);
+		for (const patch of patches) {
+			expect(patch.fields).toEqual({ purchase_total: null });
+		}
+	});
+
+	it("sin ids no produce parches", () => {
+		expect(buildSetPurchaseTotal([], ts, 100)).toEqual([]);
 	});
 });
 
