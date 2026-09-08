@@ -1,4 +1,14 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
+import { useEffect, useState } from "react";
+
+/**
+ * Cada cuánto se le pregunta al navegador si `sw.js` cambió. `registerType: 'prompt'`
+ * (vite.config.ts) no trae chequeo periódico: sin esto, un service worker nuevo solo se detecta al
+ * cargar la página en frío, y en una PWA de iOS "volver a la app" normalmente reanuda la página
+ * congelada en vez de recargarla, así que un dispositivo puede quedarse días en una versión vieja
+ * mientras el otro ya actualizó. Una hora es el intervalo del ejemplo de vite-plugin-pwa.
+ */
+const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
 /**
  * Aviso de versión nueva (experiencia_usuario §11, "aviso discreto, nunca recarga por
@@ -12,17 +22,47 @@ import { useRegisterSW } from "virtual:pwa-register/react";
  * `updateServiceWorker(true)`, que manda el mensaje de skip-waiting al SW en espera; cuando ese
  * SW toma el control, la propia librería recarga la página (no se pasa `onNeedReload`, así que
  * usa su recarga por defecto).
+ *
+ * `onRegisteredSW` captura el `ServiceWorkerRegistration` para pedirle un `update()` periódico y
+ * cada vez que la app vuelve a primer plano: es lo que hace que los dos dispositivos del hogar
+ * converjan a la misma versión sin tener que matar la app. `update()` solo re-descarga `sw.js`;
+ * si no cambió, no ocurre nada.
  */
 export function UpdateBanner() {
+	const [registration, setRegistration] = useState<
+		ServiceWorkerRegistration | undefined
+	>();
+
 	const {
 		needRefresh: [needRefresh],
 		updateServiceWorker,
 	} = useRegisterSW({
 		immediate: true,
+		onRegisteredSW(_swScriptUrl, r) {
+			setRegistration(r);
+		},
 		onOfflineReady() {
 			console.log("La app ya puede abrir sin conexión.");
 		},
 	});
+
+	useEffect(() => {
+		if (!registration) return;
+		const check = () => {
+			registration.update().catch(() => {
+				// Sin red, o el navegador rechaza el chequeo: se reintenta en el siguiente ciclo.
+			});
+		};
+		const interval = setInterval(check, UPDATE_CHECK_INTERVAL_MS);
+		const onVisibilityChange = () => {
+			if (document.visibilityState === "visible") check();
+		};
+		document.addEventListener("visibilitychange", onVisibilityChange);
+		return () => {
+			clearInterval(interval);
+			document.removeEventListener("visibilitychange", onVisibilityChange);
+		};
+	}, [registration]);
 
 	if (!needRefresh) return null;
 
