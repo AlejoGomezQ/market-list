@@ -1,12 +1,23 @@
 /// <reference types="vitest/config" />
 import path from "node:path";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Solo en el build de Vercel: sube los source maps a Sentry para que los stack traces de
+// producción sean legibles (backlog_v2 §7). `SENTRY_AUTH_TOKEN` es un secreto de build, nunca
+// llega al cliente (no lleva prefijo VITE_). Sin el token -- local y CI -- el plugin no se
+// carga y el build sigue igual.
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
+
 // https://vite.dev/config/
 export default defineConfig({
+	// Source maps solo cuando hay token para subirlos (el build de Vercel). 'hidden': se generan
+	// pero sin el comentario `sourceMappingURL` en el JS; Sentry los sube y luego los borra, así
+	// que no se sirven en producción.
+	build: { sourcemap: sentryAuthToken ? "hidden" : false },
 	plugins: [
 		react(),
 		tailwindcss(),
@@ -65,6 +76,19 @@ export default defineConfig({
 				],
 			},
 		}),
+		...(sentryAuthToken
+			? [
+					sentryVitePlugin({
+						org: "alejogomezorg",
+						project: "market-list",
+						authToken: sentryAuthToken,
+						release: process.env.VITE_SENTRY_RELEASE
+							? { name: process.env.VITE_SENTRY_RELEASE }
+							: undefined,
+						sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
+					}),
+				]
+			: []),
 	],
 	resolve: {
 		alias: {

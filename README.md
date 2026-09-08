@@ -55,10 +55,15 @@ Para levantar Supabase local (base de datos, Auth, Realtime, Studio):
 pnpm exec supabase start
 ```
 
-El proyecto todavía no consume variables de entorno desde el cliente (no hay ningún
-`import.meta.env.VITE_*` en el código ni un `.env.example` en el repo): la conexión a Supabase
-todavía no está integrada en la app. Cuando exista, este README y un `.env.example` se
-actualizarán con lo que haga falta.
+Las variables de entorno están documentadas en [`.env.example`](.env.example). Para desarrollo
+local, copia ese archivo a `.env.local`:
+
+- **Supabase** (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`): usa los valores que imprime
+  `pnpm exec supabase status`. Sin ellas la interfaz funciona en local pero no sincroniza.
+- **Sentry** (`VITE_SENTRY_DSN` y compañía): todas opcionales. Sin `VITE_SENTRY_DSN`, Sentry no
+  se inicializa (lo normal en local). El DSN y `SENTRY_AUTH_TOKEN` solo se ponen en el entorno de
+  producción de Vercel; `SENTRY_AUTH_TOKEN` (sin prefijo `VITE_`) es de build y nunca llega al
+  cliente.
 
 ## Scripts
 
