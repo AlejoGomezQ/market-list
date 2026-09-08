@@ -200,13 +200,18 @@ function MarketRow({
 			</span>
 			<span
 				className={cn(
-					"flex-1 text-17",
+					"flex flex-1 items-baseline gap-2 text-17",
 					item.checked
 						? "text-muted-foreground line-through"
 						: "text-foreground",
 				)}
 			>
 				{product.name}
+				{product.brand && (
+					<span className="text-14 font-normal text-muted-foreground">
+						{product.brand}
+					</span>
+				)}
 			</span>
 			{editingQuantity ? (
 				<QuantityControl

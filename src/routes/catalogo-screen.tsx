@@ -55,15 +55,35 @@ export function CatalogoScreen() {
 	});
 
 	const [search, setSearch] = useState("");
+	const [categoryId, setCategoryId] = useState<string | null>(null);
 	const [drawer, setDrawer] = useState<ProductDrawerState | null>(null);
 
 	const liveProducts = useMemo(
 		() => products.filter((p) => p.deleted_at === null),
 		[products],
 	);
+	// Chips de filtro por categoría (§5): categorías vivas por `position`. El filtro es de
+	// sesión -- `useState`, se pierde al desmontar la pantalla.
+	const liveCategories = useMemo(
+		() =>
+			categories
+				.filter((c) => c.deleted_at === null)
+				.sort((a, b) => a.position - b.position),
+		[categories],
+	);
+	// Filtro por categoría en memoria, antes de la búsqueda por texto: se combinan (categoría Y
+	// texto). Sin categoría (`category_id === null`) queda fuera al elegir una concreta; visible
+	// con "Todas". Ninguna consulta nueva (CLAUDE.md).
+	const byCategory = useMemo(
+		() =>
+			categoryId === null
+				? liveProducts
+				: liveProducts.filter((p) => p.category_id === categoryId),
+		[liveProducts, categoryId],
+	);
 	const filtered = useMemo(
-		() => searchProducts(liveProducts, search),
-		[liveProducts, search],
+		() => searchProducts(byCategory, search),
+		[byCategory, search],
 	);
 	const sections = useMemo(
 		() => groupProductsBySupermarket(filtered, supermarkets),
@@ -132,6 +152,52 @@ export function CatalogoScreen() {
 				/>
 			</div>
 
+			{/* Fila de chips de categoría (§5): scroll horizontal sin barra visible, acromática --
+			el chip activo se distingue por tinta y fondo neutro, nunca por color de supermercado
+			(D-036). Cada chip supera los 44px de toque. Mismo patrón que los chips del drawer. */}
+			{liveCategories.length > 0 && (
+				<div
+					role="toolbar"
+					aria-label="Filtrar por categoría"
+					aria-orientation="horizontal"
+					className="flex gap-2 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+				>
+					<button
+						type="button"
+						aria-pressed={categoryId === null}
+						onClick={() => setCategoryId(null)}
+						className={cn(
+							"min-h-[var(--min-height-tap)] shrink-0 rounded-[var(--radius-control)] border px-[18px] text-14",
+							categoryId === null
+								? "border-foreground bg-foreground text-background"
+								: "border-border text-foreground",
+						)}
+					>
+						Todas
+					</button>
+					{liveCategories.map((category) => (
+						<button
+							key={category.id}
+							type="button"
+							aria-pressed={categoryId === category.id}
+							onClick={() =>
+								setCategoryId((current) =>
+									current === category.id ? null : category.id,
+								)
+							}
+							className={cn(
+								"min-h-[var(--min-height-tap)] shrink-0 rounded-[var(--radius-control)] border px-[18px] text-14",
+								categoryId === category.id
+									? "border-foreground bg-foreground text-background"
+									: "border-border text-foreground",
+							)}
+						>
+							{category.name}
+						</button>
+					))}
+				</div>
+			)}
+
 			<div className="min-h-0 flex-1 overflow-y-auto pb-24">
 				{liveProducts.length === 0 ? (
 					<p className="px-8 pt-16 text-center text-20 font-bold text-foreground wdth-75">
@@ -139,7 +205,9 @@ export function CatalogoScreen() {
 					</p>
 				) : sections.length === 0 ? (
 					<p className="px-4 pt-4 text-14 text-muted-foreground">
-						Nada coincide con "{search}".
+						{search.trim()
+							? `Nada coincide con "${search}".`
+							: "Nada en esta categoría."}
 					</p>
 				) : (
 					sections.map((section) => (
