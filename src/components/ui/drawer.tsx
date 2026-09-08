@@ -118,13 +118,20 @@ function DrawerHeader({
  * drawer de producto en iPhone, donde "Guardar" se iba de la pantalla al expandir "Marca y
  * categoría"). `touch-pan-y` reautoriza el paneo vertical dentro del subárbol: vaul fija
  * `touch-action: none` en la raíz de `DrawerContent` para leer el arrastre de cierre.
+ *
+ * `min-h-0` + `shrink` (sin `flex-1`): el cuerpo se encoge y scrollea cuando el contenido pasa del
+ * tope de `DrawerContent`, pero NO crece para llenarlo. Con `flex-1` (`flex-basis: 0`) WebKit en
+ * iOS resuelve la altura `auto` de `DrawerContent` (que es `position: fixed` con `bottom` fijado y
+ * `top: auto`) contra el bloque contenedor entero en vez de contra el contenido, y el drawer se
+ * estira hasta el tope con una franja negra vacía debajo de un contenido corto (drawer de Ajustes).
+ * Sin el hijo `flex-basis: 0`, la altura `auto` vuelve a ser la del contenido.
  */
 function DrawerBody({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="drawer-body"
 			className={cn(
-				"flex min-h-0 flex-1 flex-col gap-[22px] touch-pan-y overflow-y-auto overscroll-contain px-5 pt-[26px] pb-5",
+				"flex min-h-0 shrink flex-col gap-[22px] touch-pan-y overflow-y-auto overscroll-contain px-5 pt-[26px] pb-5",
 				className,
 			)}
 			{...props}
