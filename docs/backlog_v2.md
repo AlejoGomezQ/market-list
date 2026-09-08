@@ -138,3 +138,48 @@ IndexedDB falla al abrir una transacción, llega a pantalla algo como
 - Reglas de alerta y scrubbing más fino en Sentry (por ahora solo `sendDefaultPii: false`).
 - Mapear códigos concretos de PostgREST (p. ej. el límite de intentos de `join_household`) a
   mensajes propios; hoy caen al genérico.
+
+## 8. Volver a entrar a un hogar sin perder nada
+
+Surgió al definir multi-hogar (`plan_multi_hogar_y_copia_catalogo_v0.1.md`, §8). Hoy salir de un
+hogar (`leave_household`) o ser expulsado al regenerar el código (D-040) borra la membresía. Volver a
+entrar con el código crea una membresía nueva, pero:
+
+- Si además reinstalaste la app, tu identidad anónima es otra (`estrategia_sincronizacion §7`): los
+  cambios que tuvieras en cola sin enviar se pierden.
+- Con multi-hogar, reinstalar obliga a reintroducir el código de **cada** hogar a mano; no hay
+  "recuperar todos mis hogares". Se aceptó así para el MVP de multi-hogar, pero conviene resolverlo.
+
+**Objetivo:** que quien salió o fue expulsado (y quizá reinstaló) pueda volver a entrar y quedar en
+el mismo estado, sin datos huérfanos ni duplicados, "sin que nada cambie".
+
+**Preguntas abiertas:**
+
+- El catálogo y la lista se rebajan enteros del servidor al reentrar (ya pasa hoy), así que el único
+  riesgo real es la **cola pendiente** atada a la identidad anónima vieja. ¿Basta con avisar de esos
+  N cambios antes de reinstalar/salir, o hace falta más?
+- ¿Un "código de recuperación" por dispositivo, aparte del código del hogar, que reasocie la
+  identidad anónima nueva con la vieja?
+- ¿La app guarda la lista de códigos de hogar en algún sitio que sobreviva a reinstalar (no
+  `localStorage`), para reofrecerlos al volver?
+
+## 9. Roles en el hogar: creador = admin
+
+Propuesta del usuario (2026-09-08) al definir multi-hogar: **quien crea el hogar es admin** y el
+único que puede **regenerar el código** (D-014/D-040); el resto de miembros solo pueden **compartir**
+el código existente.
+
+**Reabre RN-009** (*"Ambos usuarios tienen los mismos permisos. No existen roles administrativos
+diferentes en el MVP."*) y ARF §5.1. A resolver con cuidado antes de implementar:
+
+- **Sin login, la identidad es el dispositivo.** Si el admin pierde el teléfono, nadie puede
+  regenerar el código nunca más — y regenerar es la única mitigación de "quien tiene el código entra"
+  (D-014). Hace falta traspaso de admin, o que otro miembro herede el rol bajo alguna condición
+  (p. ej. el miembro más antiguo si el admin lleva X sin aparecer, o un traspaso explícito).
+- ¿Qué pasa al salir el admin del hogar? ¿el rol pasa automáticamente al siguiente miembro?
+- El rol es por `(hogar, usuario)`: encaja como columna `role` en `household_members`. Con multi-hogar
+  una misma persona puede ser admin de un hogar y miembro raso de otro.
+- Interacción con copiar catálogo (§2 / D-051): ¿copiar el catálogo de un hogar exige ser admin de
+  él, o basta ser miembro (plan actual)?
+- Beneficio secundario: reduce las expulsiones accidentales por regenerar, que es justo el problema
+  que la "detección de expulsión" del plan de multi-hogar mitiga por el otro lado.
