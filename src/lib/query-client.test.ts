@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	clearPersistedSyncState,
 	createSyncQueryClient,
 	persistOptions,
 	queuePersistOptions,
@@ -49,8 +50,15 @@ describe("createSyncQueryClient", () => {
 });
 
 describe("D-030 -- la caché es desechable, la cola de salida no: dos persistidores separados", () => {
-	it("son dos Persister distintos, cada uno en su propio object store de IndexedDB", () => {
+	it("son dos Persister distintos, cada uno en su propia base de datos de IndexedDB", () => {
 		expect(persistOptions.persister).not.toBe(queuePersistOptions.persister);
+	});
+
+	it("clearPersistedSyncState nunca rechaza aunque un almacén no exista (salir del hogar)", async () => {
+		// jsdom no implementa IndexedDB, así que ambos `clear` rechazan aquí: la aserción es que
+		// `clearPersistedSyncState` los absorbe (allSettled) y resuelve igual, para que salir del
+		// hogar no enseñe un error crudo de IndexedDB al usuario.
+		await expect(clearPersistedSyncState()).resolves.toBeUndefined();
 	});
 
 	it("el persistidor de la caché nunca guarda mutaciones, pase lo que pase el default de la librería", () => {

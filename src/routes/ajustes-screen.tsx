@@ -87,9 +87,10 @@ export function AjustesDrawer() {
 			// lleva a onboarding. No se restablece leavePending: la página se va.
 			window.location.assign("/");
 		} catch (err) {
-			setLeaveError(
-				err instanceof Error ? err.message : "No se pudo salir del hogar.",
-			);
+			// El texto crudo de la excepción (p. ej. un error de IndexedDB) no le sirve a nadie de
+			// pie en un pasillo: mensaje fijo en español (identidad_visual §8, backlog_v2 §7).
+			console.error("No se pudo salir del hogar", err);
+			setLeaveError("No se pudo salir del hogar. Inténtalo de nuevo.");
 			setLeavePending(false);
 		}
 	}

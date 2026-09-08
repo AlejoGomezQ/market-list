@@ -145,28 +145,32 @@ export function splitByChecked<T extends { item: ListItem }>(
 }
 
 /**
- * Texto para compartir "lo que falta" de un supermercado con alguien que no tiene la app
- * (backlog_v2 §3). El caso de uso es WhatsApp: la cabecera va envuelta en asteriscos (`*Supermu*`),
- * que WhatsApp renderiza en negrilla y otras apps muestran literal -- compromiso aceptado. Sin
- * emojis (D-035, identidad_visual §8): el bullet es `•` (U+2022), un signo tipográfico, no un
- * pictograma. Una línea en blanco tras la cabecera y una línea `• {nombre}` por producto pendiente
- * (`!item.checked`). La cantidad se imprime como sufijo ` x{n}` solo si es mayor que 1
- * (identidad_visual §4); nunca la marca. Sin pendientes devuelve solo la cabecera en negrilla -- el
- * llamador ya oculta el botón en ese caso, esto es la red de seguridad.
+ * Texto para compartir "lo que falta" de la lista de mercado entera con alguien que no tiene la app
+ * (backlog_v2 §3). Recibe la lista ya agrupada por supermercado (`groupMarketListBySupermarket`) y
+ * concatena una sección por cada supermercado con pendientes. El caso de uso es WhatsApp: la
+ * cabecera va envuelta en asteriscos (`*Supermu*`), que WhatsApp renderiza en negrilla y otras apps
+ * muestran literal -- compromiso aceptado. Sin emojis (D-035, identidad_visual §8): el bullet es `•`
+ * (U+2022), un signo tipográfico, no un pictograma. Por sección: cabecera, una línea en blanco y una
+ * línea `• {nombre}` por producto pendiente (`!item.checked`); la cantidad se imprime como sufijo
+ * ` x{n}` solo si es mayor que 1 (identidad_visual §4), nunca la marca. Las secciones sin pendientes
+ * se omiten y las que quedan se unen con una línea en blanco. Sin ningún pendiente en toda la lista
+ * devuelve `""` -- el llamador ya oculta el botón en ese caso, esto es la red de seguridad.
  */
-export function formatMarketListForSharing(
-	supermarketName: string,
-	entries: Array<{ item: ListItem; product: Product }>,
-): string {
-	const header = `*${supermarketName}*`;
-	const lines = entries
-		.filter((entry) => !entry.item.checked)
-		.map((entry) =>
-			entry.item.quantity > 1
-				? `• ${entry.product.name} x${entry.item.quantity}`
-				: `• ${entry.product.name}`,
-		);
-	return lines.length === 0 ? header : `${header}\n\n${lines.join("\n")}`;
+export function formatMarketListForSharing(sections: MarketSection[]): string {
+	const blocks: string[] = [];
+	for (const section of sections) {
+		const lines = section.entries
+			.filter((entry) => !entry.item.checked)
+			.map((entry) =>
+				entry.item.quantity > 1
+					? `• ${entry.product.name} x${entry.item.quantity}`
+					: `• ${entry.product.name}`,
+			);
+		if (lines.length === 0) continue;
+		const header = `*${section.supermarket?.name ?? "Sin asignar"}*`;
+		blocks.push(`${header}\n\n${lines.join("\n")}`);
+	}
+	return blocks.join("\n\n");
 }
 
 export interface CatalogSection {

@@ -12,6 +12,7 @@ import {
 	requestPersistentStorage,
 	setHouseholdLink,
 } from "@/lib/household-link";
+import { formatHouseholdInvite, shareText } from "@/lib/share";
 
 type Step =
 	| { kind: "choice" }
@@ -203,16 +204,30 @@ export function OnboardingScreen() {
 						<span className="text-20 font-bold tracking-widest">
 							{step.joinCode}
 						</span>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => {
-								navigator.clipboard?.writeText(step.joinCode);
-								setCodeCopied(true);
-							}}
-						>
-							{codeCopied ? "Copiado" : "Copiar"}
-						</Button>
+						<div className="flex flex-wrap items-center gap-2">
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => {
+									navigator.clipboard?.writeText(step.joinCode);
+									setCodeCopied(true);
+								}}
+							>
+								{codeCopied ? "Copiado" : "Copiar"}
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={async () => {
+									const result = await shareText(
+										formatHouseholdInvite(step.joinCode),
+									);
+									if (result === "copied") setCodeCopied(true);
+								}}
+							>
+								Compartir
+							</Button>
+						</div>
 					</div>
 					<Button
 						type="button"

@@ -1,14 +1,9 @@
-import { Check, ChevronDown, Share2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
+import { useRef, useState } from "react";
 import { useRowFlip } from "@/components/market/use-row-flip";
 import { QuantityControl } from "@/components/quantity-control";
 import { Button } from "@/components/ui/button";
-import {
-	formatMarketListForSharing,
-	splitByChecked,
-	supermarketColorClass,
-} from "@/lib/selectors";
-import { shareText } from "@/lib/share";
+import { splitByChecked, supermarketColorClass } from "@/lib/selectors";
 import { cn } from "@/lib/utils";
 import type { ListItem, Product, Supermarket } from "@/schemas/domain";
 
@@ -49,29 +44,8 @@ export function MarketSection({
 	);
 	const name = supermarket?.name ?? "Sin asignar";
 
-	// Aviso transitorio junto al botón de compartir (mismo patrón que `lastFinalized` en
-	// mercado-screen: estado + setTimeout). Solo aparece cuando compartir cae en copiar o falla;
-	// la hoja de compartir nativa y su cancelación no dicen nada.
-	const [shareNotice, setShareNotice] = useState<string | null>(null);
-	const shareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-	useEffect(() => {
-		return () => {
-			if (shareTimer.current) clearTimeout(shareTimer.current);
-		};
-	}, []);
-
 	function toggleQuantityEditing(id: string) {
 		setQuantityEditingId((current) => (current === id ? null : id));
-	}
-
-	async function handleShare() {
-		const result = await shareText(formatMarketListForSharing(name, entries));
-		if (result === "shared" || result === "cancelled") return;
-		setShareNotice(
-			result === "copied" ? "Lista copiada" : "No se pudo compartir",
-		);
-		if (shareTimer.current) clearTimeout(shareTimer.current);
-		shareTimer.current = setTimeout(() => setShareNotice(null), 2000);
 	}
 
 	return (
@@ -167,27 +141,6 @@ export function MarketSection({
 								? `Finalizar compra · ${checked.length}`
 								: "Finalizar compra"}
 						</Button>
-						{pending.length > 0 && (
-							<>
-								<Button
-									type="button"
-									variant="outline"
-									onClick={handleShare}
-									className="mt-2 min-h-[var(--min-height-tap)] w-full"
-								>
-									<Share2 aria-hidden="true" strokeWidth={1.75} />
-									Compartir
-								</Button>
-								{shareNotice && (
-									<p
-										role="status"
-										className="mt-2 text-center text-13 text-muted-foreground"
-									>
-										{shareNotice}
-									</p>
-								)}
-							</>
-						)}
 					</div>
 				</>
 			)}

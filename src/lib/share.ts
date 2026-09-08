@@ -33,3 +33,12 @@ export async function shareText(
 		return "failed";
 	}
 }
+
+/**
+ * Texto de invitación a un hogar para compartir por WhatsApp (RF-022, D-014). El código va en
+ * negrilla de WhatsApp (`*...*`), igual criterio que `formatMarketListForSharing`. Sin emojis
+ * (D-035).
+ */
+export function formatHouseholdInvite(code: string): string {
+	return `Con este código puedes unirte a un hogar y gestionar tu lista de mercado\n\n*${code}*`;
+}
