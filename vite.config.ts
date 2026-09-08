@@ -12,8 +12,22 @@ import { VitePWA } from "vite-plugin-pwa";
 // carga y el build sigue igual.
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 
+// La versión del despliegue para Sentry: la variable explícita si está, y si no el SHA del commit
+// que Vercel expone de fábrica en el build (`VERCEL_GIT_COMMIT_SHA`). Así no hace falta configurar
+// `VITE_SENTRY_RELEASE` a mano. Vite ya sustituye `import.meta.env.VITE_*` por su cuenta, pero
+// `VERCEL_GIT_COMMIT_SHA` no lleva ese prefijo, de ahí el `define`.
+const sentryRelease =
+	process.env.VITE_SENTRY_RELEASE ?? process.env.VERCEL_GIT_COMMIT_SHA;
+
 // https://vite.dev/config/
 export default defineConfig({
+	...(sentryRelease
+		? {
+				define: {
+					"import.meta.env.VITE_SENTRY_RELEASE": JSON.stringify(sentryRelease),
+				},
+			}
+		: {}),
 	// Source maps solo cuando hay token para subirlos (el build de Vercel). 'hidden': se generan
 	// pero sin el comentario `sourceMappingURL` en el JS; Sentry los sube y luego los borra, así
 	// que no se sirven en producción.
@@ -82,9 +96,7 @@ export default defineConfig({
 						org: "alejogomezorg",
 						project: "market-list",
 						authToken: sentryAuthToken,
-						release: process.env.VITE_SENTRY_RELEASE
-							? { name: process.env.VITE_SENTRY_RELEASE }
-							: undefined,
+						release: sentryRelease ? { name: sentryRelease } : undefined,
 						sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
 					}),
 				]
