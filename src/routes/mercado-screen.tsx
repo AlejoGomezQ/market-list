@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search, Share2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MarketSection } from "@/components/market/market-section";
 import { SyncStatusIndicator } from "@/components/sync-status";
@@ -23,10 +23,12 @@ import {
 	supermarketsQuery,
 } from "@/lib/queries/household-tables";
 import {
+	formatMarketListForSharing,
 	groupMarketListBySupermarket,
 	indexActiveListItemsByProduct,
 	searchProducts,
 } from "@/lib/selectors";
+import { shareText } from "@/lib/share";
 import { useMarkListItemChecked } from "@/lib/sync/optimistic";
 import { useWakeLock } from "@/lib/use-wake-lock";
 import type { ListItem, Product, Supermarket } from "@/schemas/domain";
@@ -89,11 +91,18 @@ export function MercadoScreen() {
 		itemIds: string[];
 	} | null>(null);
 	const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	// Aviso transitorio bajo la cabecera al compartir (mismo patrón que `lastFinalized`): solo
+	// aparece cuando compartir cae en copiar al portapapeles o falla; la hoja nativa y su
+	// cancelación no dicen nada.
+	const [shareNotice, setShareNotice] = useState<string | null>(null);
+	const shareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	// Limpia el temporizador del aviso de deshacer si la pantalla se desmonta con uno pendiente.
+	// Limpia los temporizadores (deshacer y aviso de compartir) si la pantalla se desmonta con uno
+	// pendiente.
 	useEffect(() => {
 		return () => {
 			if (undoTimer.current) clearTimeout(undoTimer.current);
+			if (shareTimer.current) clearTimeout(shareTimer.current);
 		};
 	}, []);
 
@@ -201,6 +210,18 @@ export function MercadoScreen() {
 		setFinalizeConfirm(null);
 	}
 
+	async function handleShareList() {
+		const text = formatMarketListForSharing(sections);
+		if (!text) return;
+		const result = await shareText(text);
+		if (result !== "copied" && result !== "failed") return;
+		setShareNotice(
+			result === "copied" ? "Lista copiada" : "No se pudo compartir",
+		);
+		if (shareTimer.current) clearTimeout(shareTimer.current);
+		shareTimer.current = setTimeout(() => setShareNotice(null), 2000);
+	}
+
 	function handleUndo() {
 		if (!lastFinalized) return;
 		listItemMutations.undoFinalize(lastFinalized.itemIds);
@@ -213,29 +234,53 @@ export function MercadoScreen() {
 			<header className="px-4 py-6">
 				<div className="flex items-center justify-between">
 					<h1 className="text-26 font-bold wdth-75">Mercado</h1>
-					<button
-						type="button"
-						aria-label={searchOpen ? "Cerrar buscador" : "Buscar producto"}
-						onClick={() => {
-							setSearchOpen((open) => !open);
-							setSearch("");
-						}}
-						className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
-					>
-						{searchOpen ? (
-							<X aria-hidden="true" className="size-5" strokeWidth={1.75} />
-						) : (
-							<Search
-								aria-hidden="true"
-								className="size-5"
-								strokeWidth={1.75}
-							/>
+					<div className="flex items-center">
+						{/* Dos iconos en la cabecera es el límite aceptado (identidad_visual §5). El de
+						compartir manda la lista entera (todas las secciones con pendientes); se oculta
+						cuando no hay nada que comprar. */}
+						{hasPending && (
+							<button
+								type="button"
+								aria-label="Compartir la lista de mercado"
+								onClick={() => void handleShareList()}
+								className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
+							>
+								<Share2
+									aria-hidden="true"
+									className="size-5"
+									strokeWidth={1.75}
+								/>
+							</button>
 						)}
-					</button>
+						<button
+							type="button"
+							aria-label={searchOpen ? "Cerrar buscador" : "Buscar producto"}
+							onClick={() => {
+								setSearchOpen((open) => !open);
+								setSearch("");
+							}}
+							className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
+						>
+							{searchOpen ? (
+								<X aria-hidden="true" className="size-5" strokeWidth={1.75} />
+							) : (
+								<Search
+									aria-hidden="true"
+									className="size-5"
+									strokeWidth={1.75}
+								/>
+							)}
+						</button>
+					</div>
 				</div>
 				<div className="mt-1">
 					<SyncStatusIndicator queryClient={queryClient} />
 				</div>
+				{shareNotice && (
+					<p role="status" className="mt-1 text-13 text-muted-foreground">
+						{shareNotice}
+					</p>
+				)}
 
 				{searchOpen && (
 					<div className="mt-3">

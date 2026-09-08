@@ -482,41 +482,78 @@ describe("formatMarketListForSharing", () => {
 		}),
 		product: product({ id: over.id ?? "prod-1", name: over.name ?? "Leche" }),
 	});
+	const section = (
+		name: string | null,
+		entries: Array<ReturnType<typeof entry>>,
+	) => ({
+		supermarket: name === null ? null : supermarket({ name }),
+		entries,
+	});
 
-	it("starts with the supermarket name in WhatsApp bold, then a blank line", () => {
-		const text = formatMarketListForSharing("Supermu", [
-			entry({ name: "Leche" }),
+	it("concatenates one block per supermarket with pending items, joined by a blank line", () => {
+		const text = formatMarketListForSharing([
+			section("Supermu", [entry({ id: "p1", name: "Leche" })]),
+			section("D1", [entry({ id: "p2", name: "Arroz" })]),
+		]);
+		expect(text).toBe("*Supermu*\n\n• Leche\n\n*D1*\n\n• Arroz");
+	});
+
+	it("uses each block's header in WhatsApp bold followed by a blank line", () => {
+		const text = formatMarketListForSharing([
+			section("Supermu", [entry({ name: "Leche" })]),
+		]);
+		expect(text).toBe("*Supermu*\n\n• Leche");
+	});
+
+	it('labels the null supermarket "Sin asignar"', () => {
+		const text = formatMarketListForSharing([
+			section(null, [entry({ name: "Sal" })]),
+		]);
+		expect(text).toBe("*Sin asignar*\n\n• Sal");
+	});
+
+	it("omits sections with no pending items", () => {
+		const text = formatMarketListForSharing([
+			section("Supermu", [entry({ id: "p1", name: "Leche" })]),
+			section("D1", [entry({ id: "p2", name: "Arroz", checked: true })]),
 		]);
 		expect(text).toBe("*Supermu*\n\n• Leche");
 	});
 
 	it("lists only pending products, excluding the checked ones", () => {
-		const text = formatMarketListForSharing("Supermu", [
-			entry({ id: "p1", name: "Leche", checked: false }),
-			entry({ id: "p2", name: "Pan", checked: true }),
+		const text = formatMarketListForSharing([
+			section("Supermu", [
+				entry({ id: "p1", name: "Leche", checked: false }),
+				entry({ id: "p2", name: "Pan", checked: true }),
+			]),
 		]);
 		expect(text).toBe("*Supermu*\n\n• Leche");
 	});
 
 	it("appends ' x{n}' only when quantity is greater than 1", () => {
-		const text = formatMarketListForSharing("Supermu", [
-			entry({ id: "p1", name: "Leche", quantity: 1 }),
-			entry({ id: "p2", name: "Huevos", quantity: 12 }),
+		const text = formatMarketListForSharing([
+			section("Supermu", [
+				entry({ id: "p1", name: "Leche", quantity: 1 }),
+				entry({ id: "p2", name: "Huevos", quantity: 12 }),
+			]),
 		]);
 		expect(text).toBe("*Supermu*\n\n• Leche\n• Huevos x12");
 	});
 
-	it("returns just the bold header when nothing is pending", () => {
-		const text = formatMarketListForSharing("Supermu", [
-			entry({ name: "Leche", checked: true }),
+	it("returns an empty string when nothing is pending in the whole list", () => {
+		const text = formatMarketListForSharing([
+			section("Supermu", [entry({ name: "Leche", checked: true })]),
+			section("D1", []),
 		]);
-		expect(text).toBe("*Supermu*");
+		expect(text).toBe("");
 	});
 
 	it("contains no emojis", () => {
-		const text = formatMarketListForSharing("Supermu", [
-			entry({ id: "p1", name: "Leche", quantity: 2 }),
-			entry({ id: "p2", name: "Pan" }),
+		const text = formatMarketListForSharing([
+			section("Supermu", [
+				entry({ id: "p1", name: "Leche", quantity: 2 }),
+				entry({ id: "p2", name: "Pan" }),
+			]),
 		]);
 		expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
 	});
