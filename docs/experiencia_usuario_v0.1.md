@@ -287,10 +287,21 @@ caracteres, en mayúsculas y con teclado sin autocorrección.
 Tras crear, se muestra el código con un botón de copiar y una explicación de una línea de para qué
 sirve. Es también la llave de recuperación (D-014) y conviene que se entienda desde el minuto uno.
 
+**Añadir otro hogar** (D-046). Quien ya tiene un hogar llega a esta misma pantalla desde Ajustes
+(`/onboarding?add=true`): el título cambia a "Añadir otro hogar", aparece un botón **Cancelar**
+visible —en pantalla completa no hay botón de atrás— y al terminar el hogar nuevo queda activo y la
+app recarga en Mercado.
+
 ### Ajustes
 
-Hogar y código (ver, copiar, regenerar, con aviso de que el anterior deja de servir), supermercados,
-categorías, estado de sincronización con la última sincronización correcta, y versión de la app.
+Su primera sección es **"Hogar activo"** (D-045): la lista de hogares del dispositivo con el activo
+marcado —con icono y texto, no solo color—, tocar otro cambia de hogar y recarga la app, y un botón
+"Añadir otro hogar". Si al abrir Ajustes se detecta que a este dispositivo lo expulsaron de un hogar
+(D-040), se quita de la lista con un aviso en frase.
+
+Debajo: hogar y código del activo (ver, copiar, regenerar, con aviso de que el anterior deja de
+servir), "copiar el catálogo de otro hogar" (D-051), supermercados, categorías, estado de
+sincronización con la última sincronización correcta, "salir de este hogar", y versión de la app.
 
 ### Estados vacíos
 

@@ -1,5 +1,6 @@
 // create_household, join_household y el aislamiento por hogar (arquitectura §5, D-014, RF-022).
 // Requiere `supabase start` arriba: correr con `pnpm test:integration`.
+import { randomUUID } from "node:crypto";
 import type { Client } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -141,7 +142,7 @@ describe("regenerate_household_code", () => {
 		const a = await newUser();
 		const { householdId, joinCode } = await createHousehold(a.client, "Casa");
 
-		const regenerated = await regenerateHouseholdCode(a.client);
+		const regenerated = await regenerateHouseholdCode(a.client, householdId);
 
 		expect(regenerated.householdId).toBe(householdId);
 		expect(regenerated.joinCode).not.toBe(joinCode);
@@ -154,8 +155,8 @@ describe("regenerate_household_code", () => {
 
 	it("el código anterior deja de servir", async () => {
 		const a = await newUser();
-		const { joinCode } = await createHousehold(a.client, "Casa");
-		await regenerateHouseholdCode(a.client);
+		const { householdId, joinCode } = await createHousehold(a.client, "Casa");
+		await regenerateHouseholdCode(a.client, householdId);
 
 		const b = await newUser();
 		await expect(joinHousehold(b.client, joinCode)).rejects.toThrow(
@@ -169,7 +170,7 @@ describe("regenerate_household_code", () => {
 		const { householdId, joinCode } = await createHousehold(a.client, "Casa");
 		await joinHousehold(b.client, joinCode);
 
-		await regenerateHouseholdCode(a.client);
+		await regenerateHouseholdCode(a.client, householdId);
 
 		const members = await admin.query(
 			"select user_id from household_members where household_id = $1",
@@ -182,7 +183,7 @@ describe("regenerate_household_code", () => {
 		const a = await newUser();
 		const { householdId } = await createHousehold(a.client, "Casa");
 
-		await regenerateHouseholdCode(a.client);
+		await regenerateHouseholdCode(a.client, householdId);
 
 		const membership = await admin.query(
 			"select 1 from household_members where household_id = $1 and user_id = $2",
@@ -191,9 +192,11 @@ describe("regenerate_household_code", () => {
 		expect(membership.rowCount).toBe(1);
 	});
 
-	it("rechaza a quien no pertenece a ningún hogar", async () => {
+	it("rechaza a quien no es miembro del hogar indicado", async () => {
 		const a = await newUser();
-		await expect(regenerateHouseholdCode(a.client)).rejects.toThrow();
+		await expect(
+			regenerateHouseholdCode(a.client, randomUUID()),
+		).rejects.toThrow();
 	});
 });
 
@@ -207,7 +210,7 @@ describe("leave_household", () => {
 			name: "Leche",
 		});
 
-		await leaveHousehold(b.client);
+		await leaveHousehold(b.client, householdId);
 
 		const membership = await admin.query(
 			"select 1 from household_members where household_id = $1 and user_id = $2",
@@ -239,7 +242,7 @@ describe("leave_household", () => {
 			name: "Pan",
 		});
 
-		await leaveHousehold(b.client);
+		await leaveHousehold(b.client, householdId);
 		const rejoined = await joinHousehold(b.client, joinCode);
 
 		expect(rejoined.householdId).toBe(householdId);
@@ -250,9 +253,11 @@ describe("leave_household", () => {
 		expect(seenByB.rowCount).toBe(1);
 	});
 
-	it("es idempotente: salir sin pertenecer a ningún hogar no lanza", async () => {
+	it("es idempotente: salir de un hogar del que no eres miembro no lanza", async () => {
 		const a = await newUser();
-		await expect(leaveHousehold(a.client)).resolves.toBeUndefined();
+		await expect(
+			leaveHousehold(a.client, randomUUID()),
+		).resolves.toBeUndefined();
 	});
 });
 

@@ -118,7 +118,9 @@ describe("deltaPull -- cursor por tabla (estrategia_sincronizacion §6)", () => 
 
 		await deltaPull(queryClient, hh);
 
-		const storedCursor = idbStore.get("sync:cursor:supermarkets") as string;
+		const storedCursor = idbStore.get(
+			`sync:cursor:${hh}:supermarkets`,
+		) as string;
 		expect(storedCursor).toBeDefined();
 		expect(new Date(storedCursor).getTime()).toBe(
 			new Date("2026-09-06T10:00:00.000Z").getTime() - 5000,
@@ -131,7 +133,28 @@ describe("deltaPull -- cursor por tabla (estrategia_sincronizacion §6)", () => 
 		expect(secondCall?.gtArgs).toEqual(["updated_at", storedCursor]);
 
 		// Sin filas nuevas, el cursor no se mueve -- no hay nada que retrasar 5s de nuevo.
-		expect(idbStore.get("sync:cursor:supermarkets")).toBe(storedCursor);
+		expect(idbStore.get(`sync:cursor:${hh}:supermarkets`)).toBe(storedCursor);
+	});
+
+	it("cada hogar lleva su propio cursor (D-044): el delta pull del hogar B no lee ni pisa el del A", async () => {
+		const queryClient = new QueryClient();
+		const hhB = "99999999-9999-4999-8999-999999999999";
+		queryResults.set("supermarkets", { data: [supermarketRow()], error: null });
+
+		await deltaPull(queryClient, hh);
+		const cursorA = idbStore.get(`sync:cursor:${hh}:supermarkets`) as string;
+		expect(cursorA).toBeDefined();
+		expect(idbStore.get(`sync:cursor:${hhB}:supermarkets`)).toBeUndefined();
+
+		calls.length = 0;
+		queryResults.set("supermarkets", { data: [], error: null });
+		await deltaPull(queryClient, hhB);
+
+		// Sin cursor propio, el hogar B arranca con un pull completo (no filtra por updated_at)...
+		const bCall = calls.find((c) => c.table === "supermarkets");
+		expect(bCall?.gtArgs).toBeUndefined();
+		// ...y el cursor del hogar A queda intacto.
+		expect(idbStore.get(`sync:cursor:${hh}:supermarkets`)).toBe(cursorA);
 	});
 
 	it("una fila con forma inesperada (frontera Realtime/red, D-023) no revienta el pull ni mueve el cursor", async () => {
@@ -142,6 +165,6 @@ describe("deltaPull -- cursor por tabla (estrategia_sincronizacion §6)", () => 
 		});
 
 		await expect(deltaPull(queryClient, hh)).resolves.toBeUndefined();
-		expect(idbStore.get("sync:cursor:supermarkets")).toBeUndefined();
+		expect(idbStore.get(`sync:cursor:${hh}:supermarkets`)).toBeUndefined();
 	});
 });

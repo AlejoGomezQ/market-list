@@ -129,9 +129,11 @@ export type RegeneratedCode = {
 
 export async function regenerateHouseholdCode(
 	client: Client,
+	householdId: string,
 ): Promise<RegeneratedCode> {
 	const result = await client.query(
-		"select regenerate_household_code() as result",
+		"select regenerate_household_code($1) as result",
+		[householdId],
 	);
 	const row = result.rows[0].result as {
 		household_id: string;
@@ -140,8 +142,57 @@ export async function regenerateHouseholdCode(
 	return { householdId: row.household_id, joinCode: row.join_code };
 }
 
-export async function leaveHousehold(client: Client): Promise<void> {
-	await client.query("select leave_household() as result");
+export async function leaveHousehold(
+	client: Client,
+	householdId: string,
+): Promise<void> {
+	await client.query("select leave_household($1) as result", [householdId]);
+}
+
+export type HouseholdMembership = {
+	householdId: string;
+	name: string;
+	joinCode: string;
+};
+
+export async function listHouseholds(
+	client: Client,
+): Promise<HouseholdMembership[]> {
+	const result = await client.query("select list_households() as result");
+	const rows = result.rows[0].result as {
+		household_id: string;
+		name: string;
+		join_code: string;
+	}[];
+	return rows.map((r) => ({
+		householdId: r.household_id,
+		name: r.name,
+		joinCode: r.join_code,
+	}));
+}
+
+export type CopyCatalogResult = {
+	supermarkets_created: number;
+	categories_created: number;
+	products_copied: number;
+};
+
+export async function copyCatalog(
+	client: Client,
+	sourceId: string,
+	targetId: string,
+	opts: { copySupermarkets?: boolean; copyCategories?: boolean } = {},
+): Promise<CopyCatalogResult> {
+	const result = await client.query(
+		"select copy_catalog($1, $2, $3, $4) as result",
+		[
+			sourceId,
+			targetId,
+			opts.copySupermarkets ?? true,
+			opts.copyCategories ?? true,
+		],
+	);
+	return result.rows[0].result as CopyCatalogResult;
 }
 
 export type PatchResult = { entity: string; id: string; status: string };

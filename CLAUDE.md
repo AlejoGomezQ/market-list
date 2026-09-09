@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-El proyecto está en fase **pre-implementación**: no hay código, ni gestor de paquetes, ni suite de pruebas, ni repositorio git inicializado. Todo el contenido vive en `docs/`:
+El proyecto está **en implementación**. El código base cubre hasta ~Fase 7 del plan (dominio, sincronización local-first, offline, historial de compras, seguimiento de errores con Sentry) más features de V2 que se van sacando del backlog (multi-hogar y copia de catálogo entre hogares, la última). La definición vive en `docs/`:
 
 - `analisis_requerimientos_funcionales_app_mercado_v0.1.md` — ARF v0.1, la definición funcional.
 - `decisiones_cerradas_v0.1.md` — las decisiones `D-0xx` que cierran la sección 14 del ARF y fijan stack, UX y sincronización. **Leerlo siempre junto al ARF**: es lo que resuelve las ambigüedades que el ARF deja abiertas.
@@ -13,6 +13,8 @@ El proyecto está en fase **pre-implementación**: no hay código, ni gestor de 
 - `experiencia_usuario_v0.1.md` — pantallas, navegación, gestos y particularidades de la PWA en iOS.
 - `identidad_visual_v0.1.md` — paleta, tipografía, retícula, movimiento y tono de los textos.
 - `plan_implementacion_v0.1.md` — las ocho fases, su criterio de "listo" y los riesgos.
+- `plan_multi_hogar_y_copia_catalogo_v0.1.md` — el diseño de multi-hogar y la copia de catálogo entre hogares (decisiones `D-043`…`D-053`, sección 6 de `decisiones_cerradas`).
+- `backlog_v2.md` — ideas de V2 surgidas del uso real; no se implementan sin que el usuario lo pida.
 
 **Disciplina que sostiene el plan.** Se construye en línea primero y se hace duradero en la fase 6. Eso solo funciona si la forma de las escrituras y las consultas es la definitiva desde la fase 2a — la costura protege el sitio desde donde se llama, pero lo irreversible es el contenido:
 
@@ -22,9 +24,7 @@ El proyecto está en fase **pre-implementación**: no hay código, ni gestor de 
 - **Escrituras optimistas desde las fases en línea**, no al final: RNF-001 prohíbe el indicador de carga en acciones frecuentes.
 - **Los items de lista se indexan por `product_id`**, no por su id: el dominio garantiza uno activo por producto, así que es su clave natural y evita reconciliar ids tras C-005.
 
-No existen todavía comandos de build, lint o test. Cuando se arranque el proyecto, documentarlos aquí y sustituir este párrafo.
-
-El siguiente paso previsto es definir la arquitectura funcional, la experiencia de usuario, la estrategia de sincronización y el detalle del stack, ya sobre las decisiones cerradas.
+**Comandos** (pnpm): `pnpm dev`; `pnpm build` (`tsc -b` + Vite); `pnpm lint` (Biome); `pnpm test` (Vitest, unit); `pnpm test:integration` (Vitest contra el Postgres de `supabase start` — necesita Docker); `pnpm test:e2e` (Playwright, WebKit). La CI (`.github/workflows/ci.yml`) corre lint, build, test, integración y e2e en cada PR contra `master`. `pnpm gen:types` regenera `src/types/database.ts` (gitignored) desde el esquema local.
 
 ## Stack decidido
 
@@ -50,6 +50,7 @@ Cuatro reglas más al tocar sincronización (el detalle está en `docs/estrategi
 5. **Realtime no es la fuente de verdad** (D-028): no reproduce lo perdido con el socket caído. Siempre hay delta pull por cursor al arrancar, al recuperar red, al volver a primer plano y al reconectar.
 6. **Dos relojes, dos trabajos:** `field_updated_at` usa la hora del cliente acotada al `now()` del servidor (representa cuándo decidió el usuario); `updated_at` usa siempre `now()` del servidor, porque es el cursor. Escribir el reloj del cliente en `updated_at` hace que las filas de un móvil atrasado no se descarguen nunca.
 7. **El service worker cachea el armazón, nunca las llamadas a Supabase** (van en solo-red). Dos cachés con invalidaciones distintas acaban mostrando datos más viejos que los de IndexedDB.
+8. **Multi-hogar: la sincronización es solo del hogar activo** (D-043, D-044). Un dispositivo puede pertenecer a varios hogares; el vínculo local es `{ households, activeId }` en `localStorage`. Realtime, delta pull y cola operan solo sobre el activo. El cursor del delta pull lleva el `householdId` en la clave (`sync:cursor:<householdId>:<entity>`): si se namespacea mal, cambiar de hogar se salta filas en silencio. Cambiar de hogar recarga la app; no conviertas el vínculo en un store observable. `copy_catalog` es la única escritura que no pasa por `sync_push` (D-049) — excepción acotada, no un patrón a repetir.
 
 ## Producto
 
@@ -125,8 +126,9 @@ La sección 14 del ARF listaba nueve decisiones abiertas. **Ya están cerradas e
 - La lista usa **secciones, no pestañas**: el hogar tiene dos supermercados (D-007).
 - Conflictos: **último en escribir gana, campo a campo**, con cuatro escenarios resueltos explícitamente en la tabla C-001…C-004.
 - El código del hogar es **permanente, reutilizable y regenerable**, y es la única vía de recuperación tras reinstalar (D-014).
+- **Multi-hogar** (sección 6, D-043…D-053): un dispositivo puede pertenecer a varios hogares con uno activo; la sincronización es solo del activo; `copy_catalog` copia el catálogo de un hogar a otro en una RPC transaccional. Detalle en `plan_multi_hogar_y_copia_catalogo_v0.1.md`.
 
-Lo que sigue abierto está en la sección 6 de ese documento y es todo diferido a post-MVP; son decisiones del usuario, no defaults a inventar.
+Lo que sigue diferido a post-MVP (roles de hogar, reentrada limpia tras salir/reinstalar, orden de recorrido por supermercado, sucursales, precios, estadísticas) está en `backlog_v2.md`; son decisiones del usuario, no defaults a inventar.
 
 ## Convenciones
 

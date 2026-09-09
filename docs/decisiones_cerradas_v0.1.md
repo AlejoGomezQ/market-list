@@ -430,3 +430,95 @@ Nada de esto bloquea la fase de definición:
   implementa.
 - Administración de categorías por parte del usuario (UX-005): se siembran, se editan más adelante.
 - Historial, precios, estadísticas y ubicación: fuera del MVP por decisión del ARF.
+
+---
+
+## 6. Multi-hogar y copia de catálogo (V2)
+
+Cierran `backlog_v2.md` §1 y §2. El diseño completo y el porqué de cada una están en
+`plan_multi_hogar_y_copia_catalogo_v0.1.md`; aquí queda solo el enunciado canónico. Implementadas en
+la rama `feature/multi-hogar-y-copia-catalogo`. Fecha: 2026-09-08.
+
+### D-043 — Un dispositivo puede pertenecer a varios hogares; el "hogar activo" es local
+
+El vínculo de `localStorage` pasa de un objeto único a `{ households: HouseholdLink[], activeId }`.
+El hogar activo **no se sincroniza**: cada dispositivo, incluidos los dos de una misma persona, elige
+el suyo. No hay columna ni tabla de servidor para esto. El esquema `household_members` (PK
+`(household_id, user_id)` sin `unique(user_id)`) ya lo permitía; el trabajo fue de cliente y de
+firmas de RPC.
+
+### D-044 — La sincronización opera solo sobre el hogar activo
+
+Realtime, delta pull y la cola trabajan únicamente sobre el hogar activo (amplía D-029). Cambiar de
+hogar **recarga la app** (`window.location.assign`), como ya hacía salir de un hogar. El cursor del
+delta pull pasa a llevar el `householdId` en la clave (`sync:cursor:<householdId>:<entity>`): sin
+esto, cambiar de hogar reutiliza el cursor del anterior y se salta filas en silencio.
+
+### D-045 — El selector de hogar vive en Ajustes, como primera sección
+
+No va en la cabecera de Mercado: rompería el contrato del `<h1>Mercado</h1>` de los tests y choca con
+"lo que está arriba del todo es para mirar, no para tocar" (`experiencia_usuario` §1). Se revisará en
+Fase 8 si el uso muestra que se cambia de hogar a menudo.
+
+### D-046 — "Añadir otro hogar" reutiliza la pantalla de onboarding
+
+Desde Ajustes se navega a `/onboarding?add=true`. El guardia de onboarding deja pasar en ese modo
+aunque ya haya vínculo; la copia cambia a "Añadir otro hogar", aparece un botón "Cancelar" visible
+(en pantalla completa no hay botón de atrás), y al terminar el hogar nuevo queda activo y la app
+recarga.
+
+### D-047 — Salir de un hogar con otros pendientes hace limpieza selectiva
+
+Si quedan otros hogares, salir elimina solo las 4 consultas y los 4 cursores de ese hogar
+(`clearHouseholdSyncState`) y promueve otro activo. Si era el último, comportamiento anterior
+(`clearPersistedSyncState` global + volver a onboarding). La cola no se segmenta por hogar: un parche
+huérfano del hogar abandonado, caso raro, acabaría en cuarentena con aviso legible.
+
+### D-048 — `regenerate_household_code` y `leave_household` reciben `p_household_id`
+
+Dejan de derivar el hogar de `auth.uid()` (con `limit 1` sin orden, o borrando todas las
+membresías). Reciben el id explícito y validan `is_member`. La expulsión de D-040 queda acotada a ese
+hogar.
+
+### D-049 — Copiar catálogo es una RPC transaccional, excepción acotada a D-039
+
+`copy_catalog(origen, destino, copiar_supermercados, copiar_categorias)`, `security definer`, con
+`is_member` sobre **ambos** hogares, todo en una transacción. Es una excepción deliberada a "un solo
+camino de escritura": operación administrativa, en línea, no frecuente, que debe ser atómica, con el
+mismo precedente que la siembra de categorías de `create_household`. No se hace con ~100 parches por
+`sync_push`.
+
+### D-050 — Qué copia `copy_catalog` y cómo resuelve duplicados
+
+Copia productos activos del origen y, según los dos flags, sus categorías y supermercados.
+Categorías y supermercados se emparejan con los del destino por `lower(btrim(name))`; los que no
+existan se crean con id nuevo. Un producto cuyo `(nombre, marca)` ya exista activo en el destino se
+omite — resuelve D-006 en masa. No copia items de lista ni lápidas. Ejecutarla dos veces seguidas es
+un no-op.
+
+### D-051 — Para copiar de un hogar hay que ser miembro de él
+
+`copy_catalog` exige `is_member` sobre origen y destino. La feature de copia **no tiene entrada de
+código propia**: se apoya en "añadir otro hogar" (D-046) para eso, y solo añade un selector de origen
+entre los hogares del dispositivo y la llamada a la RPC. Copiar es una acción en línea; su botón se
+desactiva sin conexión. No se ofrece salir del hogar de origen tras copiar: se hace a mano desde
+Ajustes.
+
+### D-052 — Color de los supermercados copiados
+
+No hay columna de color: el color se deriva del orden `position` de cada supermercado en el cliente
+(D-036, `identidad_visual` §2). Así que "asignar el siguiente color libre" a un supermercado copiado
+se reduce a añadirlo al final (`position = max + 1`) del hogar destino; el color sale solo.
+
+### D-053 — `list_households()` es la fuente de verdad del selector
+
+RPC que devuelve las membresías del llamador (`{ household_id, name, join_code }`). El selector de
+Ajustes la usa para mostrar la verdad y podar los hogares de los que se expulsó al dispositivo
+(D-040/D-048), con aviso. El vínculo local sigue bastando para el camino feliz y para arrancar sin
+red.
+
+### Lo que queda para más adelante
+
+`backlog_v2.md` §8 (volver a entrar a un hogar sin perder nada, tras salir, ser expulsado o
+reinstalar) y §9 (roles: el creador del hogar como único que puede regenerar el código, que reabre
+RN-009). Son ortogonales a multi-hogar y no lo bloquean.

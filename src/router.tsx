@@ -5,7 +5,8 @@ import {
 	Outlet,
 	redirect,
 } from "@tanstack/react-router";
-import { getHouseholdLink } from "@/lib/household-link";
+import { z } from "zod";
+import { getHouseholdLinks } from "@/lib/household-link";
 import { AjustesDrawer } from "@/routes/ajustes-screen";
 import { AppShell } from "@/routes/app-shell";
 import { CatalogoScreen } from "@/routes/catalogo-screen";
@@ -27,19 +28,31 @@ import { OnboardingScreen } from "@/routes/onboarding-screen";
  *   Mercado, Catálogo e Historial.
  *
  * El guardado de cada rama es el espejo de la otra en `beforeLoad`: sin hogar vinculado, cualquier
- * ruta de `shell` redirige a onboarding; con hogar ya vinculado, onboarding redirige a Mercado. La
- * comprobación es síncrona (localStorage, no red) porque el vínculo del dispositivo con su hogar
- * no es uno de los cuatro recursos que vive en la caché de TanStack Query.
+ * ruta de `shell` redirige a onboarding; con hogar ya vinculado, onboarding redirige a Mercado --
+ * salvo en modo "añadir otro hogar" (`?add=1`, D-046), que sí deja abrir onboarding aunque ya haya
+ * vínculo. La comprobación es síncrona (localStorage, no red) porque el vínculo del dispositivo con
+ * su hogar no es uno de los cuatro recursos que vive en la caché de TanStack Query.
+ *
+ * "Tener hogar" es `getHouseholdLinks().length > 0` (D-043: un dispositivo puede seguir varios): hoy
+ * equivale a lo de siempre, pero deja explícito que el guardia es binario aunque el vínculo ya no.
  */
 const rootRoute = createRootRoute({
 	component: Outlet,
 });
 
+const onboardingSearchSchema = z.object({
+	// `?add=1` (D-046): entra a onboarding para añadir OTRO hogar teniendo ya uno. Sin `add`, el
+	// guardia de abajo redirige a Mercado como siempre.
+	add: z.boolean().optional().catch(undefined),
+});
+
 const onboardingRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/onboarding",
-	beforeLoad: () => {
-		if (getHouseholdLink()) throw redirect({ to: "/" });
+	validateSearch: (search) => onboardingSearchSchema.parse(search),
+	beforeLoad: ({ search }) => {
+		if (getHouseholdLinks().length > 0 && !search.add)
+			throw redirect({ to: "/" });
 	},
 	component: OnboardingScreen,
 });
@@ -48,7 +61,7 @@ const shellRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	id: "shell",
 	beforeLoad: () => {
-		if (!getHouseholdLink()) throw redirect({ to: "/onboarding" });
+		if (getHouseholdLinks().length === 0) throw redirect({ to: "/onboarding" });
 	},
 	component: AppShell,
 });
