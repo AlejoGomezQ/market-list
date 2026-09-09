@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Plus, Search, Share2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CategoryFilterChips } from "@/components/category-filter-chips";
 import { MarketSection } from "@/components/market/market-section";
 import { SyncStatusIndicator } from "@/components/sync-status";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ import {
 	supermarketsQuery,
 } from "@/lib/queries/household-tables";
 import {
+	categoriesInMarketList,
+	filterMarketSectionsByCategory,
 	formatMarketListForSharing,
 	groupMarketListBySupermarket,
 	indexActiveListItemsByProduct,
@@ -81,6 +84,9 @@ export function MercadoScreen() {
 	);
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [search, setSearch] = useState("");
+	// Filtro por categoría: estado de sesión (`useState`), se reinicia al desmontar Mercado. No se
+	// persiste. Actúa a la vez sobre todas las secciones de supermercado.
+	const [categoryId, setCategoryId] = useState<string | null>(null);
 	const [finalizeConfirm, setFinalizeConfirm] =
 		useState<FinalizeConfirmState | null>(null);
 	// backlog §6: total gastado, opcional. Se guarda como texto crudo mientras el drawer está
@@ -115,6 +121,21 @@ export function MercadoScreen() {
 				categories,
 			),
 		[listItems, products, supermarkets, categories],
+	);
+
+	// Chips de filtro: solo las categorías presentes entre los items de la lista actual, por
+	// `position` (D-031). Ocultamos la fila con 0-1 categorías -- un solo chip no filtra nada -- pero
+	// la mantenemos si el filtro sigue fijado, para no dejar al usuario sin salida.
+	const listCategories = useMemo(
+		() => categoriesInMarketList(sections, categories),
+		[sections, categories],
+	);
+	// El filtro se deriva en memoria sobre las secciones ya agrupadas: ninguna consulta nueva
+	// (CLAUDE.md), funciona sin red. `sections` sin filtrar sigue alimentando compartir y el wake
+	// lock -- compartir manda la lista entera, no la filtrada.
+	const visibleSections = useMemo(
+		() => filterMarketSectionsByCategory(sections, categoryId),
+		[sections, categoryId],
 	);
 
 	// Wake lock mientras haya pendientes (experiencia_usuario §11, Fase 7): `sections` ya viene
@@ -333,6 +354,17 @@ export function MercadoScreen() {
 				)}
 			</header>
 
+			{/* Fila de chips bajo la cabecera, fuera del contenedor con scroll. Se muestra si hay
+			más de una categoría en la lista; también si el filtro sigue fijado tras vaciarse su
+			categoría, para conservar la salida a "Todas". */}
+			{(listCategories.length > 1 || categoryId !== null) && (
+				<CategoryFilterChips
+					categories={listCategories}
+					value={categoryId}
+					onChange={setCategoryId}
+				/>
+			)}
+
 			<div className="min-h-0 flex-1 overflow-y-auto pb-28">
 				{sections.length === 0 ? (
 					<div className="flex flex-col items-center gap-3 px-8 pt-24 text-center">
@@ -349,8 +381,14 @@ export function MercadoScreen() {
 							Ir al catálogo
 						</Link>
 					</div>
+				) : visibleSections.length === 0 ? (
+					// El filtro dejó la lista vacía pero hay items en otras categorías: un estado, no
+					// un lamento (§8), distinto del vacío real de arriba y sin enlace al catálogo.
+					<p className="px-8 pt-16 text-center text-14 text-muted-foreground">
+						Nada de esta categoría en la lista.
+					</p>
 				) : (
-					sections.map((section) => {
+					visibleSections.map((section) => {
 						const key = section.supermarket?.id ?? "sin-asignar";
 						return (
 							<MarketSection

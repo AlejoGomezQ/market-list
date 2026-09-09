@@ -6,6 +6,7 @@ import {
 	ProductDrawer,
 	type ProductDrawerState,
 } from "@/components/catalog/product-drawer";
+import { CategoryFilterChips } from "@/components/category-filter-chips";
 import { QuantityControl } from "@/components/quantity-control";
 import { Input } from "@/components/ui/input";
 import { getHouseholdLink } from "@/lib/household-link";
@@ -152,50 +153,14 @@ export function CatalogoScreen() {
 				/>
 			</div>
 
-			{/* Fila de chips de categoría (§5): scroll horizontal sin barra visible, acromática --
-			el chip activo se distingue por tinta y fondo neutro, nunca por color de supermercado
-			(D-036). Cada chip supera los 44px de toque. Mismo patrón que los chips del drawer. */}
+			{/* Chips de categoría (§5): todo el catálogo vivo por `position`. Mismo componente,
+			aspecto y comportamiento que en el Mercado. */}
 			{liveCategories.length > 0 && (
-				<div
-					role="toolbar"
-					aria-label="Filtrar por categoría"
-					aria-orientation="horizontal"
-					className="flex gap-2 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-				>
-					<button
-						type="button"
-						aria-pressed={categoryId === null}
-						onClick={() => setCategoryId(null)}
-						className={cn(
-							"min-h-[var(--min-height-tap)] shrink-0 rounded-[var(--radius-control)] border px-[18px] text-14",
-							categoryId === null
-								? "border-foreground bg-foreground text-background"
-								: "border-border text-foreground",
-						)}
-					>
-						Todas
-					</button>
-					{liveCategories.map((category) => (
-						<button
-							key={category.id}
-							type="button"
-							aria-pressed={categoryId === category.id}
-							onClick={() =>
-								setCategoryId((current) =>
-									current === category.id ? null : category.id,
-								)
-							}
-							className={cn(
-								"min-h-[var(--min-height-tap)] shrink-0 rounded-[var(--radius-control)] border px-[18px] text-14",
-								categoryId === category.id
-									? "border-foreground bg-foreground text-background"
-									: "border-border text-foreground",
-							)}
-						>
-							{category.name}
-						</button>
-					))}
-				</div>
+				<CategoryFilterChips
+					categories={liveCategories}
+					value={categoryId}
+					onChange={setCategoryId}
+				/>
 			)}
 
 			<div className="min-h-0 flex-1 overflow-y-auto pb-24">
