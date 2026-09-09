@@ -3,11 +3,28 @@
 **Versión:** 0.1
 **Fecha:** 2026-09-07
 
-Ideas que han surgido usando la app de verdad (Fase 8 del plan de implementación). **No están
-decididas ni priorizadas**: la Fase 8 termina eligiendo cuáles entran primero. Este documento
+Ideas que han surgido usando la app de verdad (Fase 8 del plan de implementación). Este documento
 complementa lo que ya se dejó fuera a propósito en `decisiones_cerradas_v0.1.md` §6 y en el ARF
 (historial, precios, estadísticas, sugerencias automáticas, ubicación/GPS), que sigue siendo la
 lista canónica de lo descartado.
+
+**Cómo se gestiona.** El seguimiento vivo (prioridad, estado, quién) está en los **issues de
+GitHub**; este documento es la fuente de verdad del *porqué* de cada punto y de sus preguntas
+abiertas. Cada punto pendiente tiene un issue que enlaza aquí.
+
+**Estado actual:**
+
+| # | Tema | Estado |
+|---|---|---|
+| 1 | Pertenecer a varios hogares | Hecho (`feature/multi-hogar-y-copia-catalogo`, PR #10) |
+| 2 | Copiar catálogo entre hogares | Hecho (`feature/multi-hogar-y-copia-catalogo`, PR #10) |
+| 3 | Compartir la lista a WhatsApp | Hecho |
+| 4 | Orden de recorrido por supermercado | Pendiente — issue #11 |
+| 5 | Historial de compras | Hecho (`feature/historial-compras`) |
+| 6 | Total gastado por compra (+ editable) | Hecho |
+| 7 | Errores legibles + Sentry | Hecho; flecos en issue #14 |
+| 8 | Volver a entrar a un hogar sin perder nada | Pendiente — issue #12 |
+| 9 | Roles en el hogar (creador = admin) | Pendiente — issue #13 |
 
 ---
 
@@ -57,23 +74,23 @@ Caso: una familia nueva parte del catálogo de otro hogar en vez de dar de alta 
   estado vacío del Catálogo. Tras copiar, un delta pull forzado repinta Mercado y Catálogo sin
   recargar.
 
-## 3. Compartir la lista de un supermercado a WhatsApp
+## 3. Compartir la lista a WhatsApp — implementado
 
-Caso: mandar "lo que falta de Supermu" a alguien que va a hacer la compra y **no tiene la app**.
+Caso: mandar "lo que falta" a alguien que va a hacer la compra y **no tiene la app**.
 
-Solo lectura, sin backend: `navigator.share()` (Web Share API, disponible en Safari iOS y en la
-PWA instalada) con un texto plano generado —nombre del supermercado y los productos pendientes, con
-la cantidad solo si es mayor que 1 (identidad_visual §4)—. Fallback a copiar al portapapeles si
-`share` no está disponible.
+**Lo que se hizo** (commits `63d208e`, `5094382`):
 
-**Preguntas abiertas:**
+- `src/lib/share.ts`: `shareText()` usa `navigator.share()` (Web Share API, Safari iOS y PWA
+  instalada) y cae a copiar al portapapeles si no está; nunca lanza, devuelve
+  `shared` / `copied` / `cancelled` / `failed` para que el llamador decida el aviso.
+- `formatMarketListForSharing` (`src/lib/selectors.ts`) genera el texto plano a partir de la lista
+  **agrupada**: una sección por supermercado con pendientes, cantidad solo si es mayor que 1
+  (identidad_visual §4), tono de identidad_visual §8.
+- Se dispara desde **un icono en la cabecera de Mercado** que comparte la lista entera; se oculta
+  cuando no hay pendientes. El botón al pie de cada sección se quitó por invasivo.
+- También se comparte el código del hogar desde el onboarding con el mismo mecanismo.
 
-- ¿Desde dónde se dispara? Un icono de compartir en la banda del supermercado en Mercado, o en el
-  drawer de finalizar compra. Cuidar el "pocos iconos" de identidad_visual §5.
-- Formato del texto: agrupado o plano, con o sin la marca. El texto compartido también sigue el
-  tono de identidad_visual §8.
-
-## 4. Orden de recorrido propio por supermercado (RF-021)
+## 4. Orden de recorrido propio por supermercado (RF-021) — issue #11
 
 Hoy, dentro de cada supermercado la lista se ordena **por categoría** (D-031,
 `groupMarketListBySupermarket` en `src/lib/selectors.ts`), como aproximación al recorrido de la
@@ -118,11 +135,10 @@ Historial (punto 5), cada compra muestra su total.
 - Formato de moneda con símbolo fijo antepuesto (`$85.400`), separador de miles, sin decimales
   (`Intl.NumberFormat('es-CO')`, `src/lib/format.ts`). No hay campo de moneda del hogar.
 
-**Pregunta abierta pendiente:**
+**Extensión hecha después** (commit `74b4041`, `feature/total-editable-y-errores`):
 
-- **Total editable desde el Historial.** Hoy el total solo se escribe al finalizar y el Historial es
-  de solo lectura (YAGNI). Editarlo después (corregir una cifra mal tecleada, o añadirla a una
-  compra que se cerró sin total) es la extensión natural.
+- **Total editable desde el Historial.** Ya se puede corregir una cifra mal tecleada o añadir el
+  total a una compra que se cerró sin él, desde la pantalla de Historial.
 
 ## 7. Errores legibles para el usuario + seguimiento interno de logs — implementado en `feature/sentry`
 
@@ -144,13 +160,13 @@ IndexedDB falla al abrir una transacción, llega a pantalla algo como
   alrededor de toda la app con `AppErrorFallback`.
 - Source maps: `@sentry/vite-plugin` los sube desde el build de Vercel cuando hay `SENTRY_AUTH_TOKEN`.
 
-**Pendiente / abierto:**
+**Pendiente / abierto** (issue #14):
 
 - Reglas de alerta y scrubbing más fino en Sentry (por ahora solo `sendDefaultPii: false`).
-- Mapear códigos concretos de PostgREST (p. ej. el límite de intentos de `join_household`) a
-  mensajes propios; hoy caen al genérico.
+- Mapear más códigos de PostgREST a mensajes propios. Hecho el de onboarding (commit `0c00be2`);
+  faltan los demás (p. ej. el límite de intentos de `join_household` fuera del onboarding).
 
-## 8. Volver a entrar a un hogar sin perder nada
+## 8. Volver a entrar a un hogar sin perder nada — issue #12
 
 Surgió al definir multi-hogar (`plan_multi_hogar_y_copia_catalogo_v0.1.md`, §8). Hoy salir de un
 hogar (`leave_household`) o ser expulsado al regenerar el código (D-040) borra la membresía. Volver a
@@ -174,7 +190,7 @@ el mismo estado, sin datos huérfanos ni duplicados, "sin que nada cambie".
 - ¿La app guarda la lista de códigos de hogar en algún sitio que sobreviva a reinstalar (no
   `localStorage`), para reofrecerlos al volver?
 
-## 9. Roles en el hogar: creador = admin
+## 9. Roles en el hogar: creador = admin — issue #13
 
 Propuesta del usuario (2026-09-08) al definir multi-hogar: **quien crea el hogar es admin** y el
 único que puede **regenerar el código** (D-014/D-040); el resto de miembros solo pueden **compartir**
