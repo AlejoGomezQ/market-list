@@ -173,6 +173,49 @@ export function formatMarketListForSharing(sections: MarketSection[]): string {
 	return blocks.join("\n\n");
 }
 
+/**
+ * Categorías vivas presentes entre los items de una lista de mercado ya agrupada, ordenadas por
+ * `position` (D-031). Alimenta los chips de filtro del Mercado: a diferencia del Catálogo, aquí no
+ * se ofrecen todas las categorías del hogar -- ofrecer "Limpieza" cuando nada de limpieza está en la
+ * lista es ruido. Deriva de `groupMarketListBySupermarket`, no de una consulta nueva.
+ */
+export function categoriesInMarketList(
+	sections: MarketSection[],
+	categories: Category[],
+): Category[] {
+	const present = new Set<string>();
+	for (const section of sections) {
+		for (const entry of section.entries) {
+			if (entry.product.category_id) present.add(entry.product.category_id);
+		}
+	}
+	return categories
+		.filter((c) => c.deleted_at === null && present.has(c.id))
+		.sort((a, b) => a.position - b.position);
+}
+
+/**
+ * Estrecha una lista de mercado agrupada a una sola categoría (RF-014). El filtro solo quita filas,
+ * nunca reordena: cada sección conserva su orden por categoría (D-031) y "Sin asignar" sigue al
+ * final. `null` devuelve las secciones tal cual. Una categoría sin items en la lista (p. ej. el
+ * filtro quedó fijado y su último item se finalizó) devuelve `[]`, y la pantalla lo distingue del
+ * vacío real. Los productos sin categoría solo se ven sin filtro.
+ */
+export function filterMarketSectionsByCategory(
+	sections: MarketSection[],
+	categoryId: string | null,
+): MarketSection[] {
+	if (categoryId === null) return sections;
+	const filtered: MarketSection[] = [];
+	for (const section of sections) {
+		const entries = section.entries.filter(
+			(entry) => entry.product.category_id === categoryId,
+		);
+		if (entries.length > 0) filtered.push({ ...section, entries });
+	}
+	return filtered;
+}
+
 export interface CatalogSection {
 	/** `null` es el grupo "Sin asignar" (D-002). */
 	supermarket: Supermarket | null;

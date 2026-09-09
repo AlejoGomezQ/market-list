@@ -6,6 +6,8 @@ import type {
 	Supermarket,
 } from "@/schemas/domain";
 import {
+	categoriesInMarketList,
+	filterMarketSectionsByCategory,
 	findSimilarProduct,
 	formatMarketListForSharing,
 	groupMarketListBySupermarket,
@@ -301,6 +303,76 @@ describe("groupMarketListBySupermarket", () => {
 			"Leche",
 			"Azúcar",
 		]);
+	});
+});
+
+describe("categoriesInMarketList / filterMarketSectionsByCategory", () => {
+	const lacteos = category({ id: "cat-lacteos", name: "Lácteos", position: 0 });
+	const limpieza = category({
+		id: "cat-limpieza",
+		name: "Limpieza",
+		position: 1,
+	});
+	const bebidas = category({ id: "cat-bebidas", name: "Bebidas", position: 2 });
+
+	const leche = product({ id: "p-leche", category_id: "cat-lacteos" });
+	const jabon = product({ id: "p-jabon", category_id: "cat-limpieza" });
+	const sal = product({ id: "p-sal", category_id: null });
+
+	const sections = [
+		{
+			supermarket: supermarket({ id: "sm-1" }),
+			entries: [
+				{
+					item: listItem({ id: "li-leche", product_id: "p-leche" }),
+					product: leche,
+				},
+				{
+					item: listItem({ id: "li-jabon", product_id: "p-jabon" }),
+					product: jabon,
+				},
+			],
+		},
+		{
+			supermarket: null,
+			entries: [
+				{ item: listItem({ id: "li-sal", product_id: "p-sal" }), product: sal },
+			],
+		},
+	];
+
+	it("lists only categories present among the list items, ordered by position", () => {
+		const result = categoriesInMarketList(sections, [
+			bebidas,
+			limpieza,
+			lacteos,
+		]);
+		expect(result.map((c) => c.name)).toEqual(["Lácteos", "Limpieza"]);
+	});
+
+	it("excludes deleted categories even if a product still points at one", () => {
+		const deleted = category({ id: "cat-lacteos", deleted_at: ts });
+		expect(categoriesInMarketList(sections, [deleted, limpieza])).toEqual([
+			limpieza,
+		]);
+	});
+
+	it("returns the sections untouched when categoryId is null", () => {
+		expect(filterMarketSectionsByCategory(sections, null)).toBe(sections);
+	});
+
+	it("narrows every section to one category and drops the ones left empty", () => {
+		const filtered = filterMarketSectionsByCategory(sections, "cat-lacteos");
+		expect(filtered).toHaveLength(1);
+		expect(filtered[0].entries.map((e) => e.product.id)).toEqual(["p-leche"]);
+	});
+
+	it("returns [] when the category has no items in the list (stuck filter)", () => {
+		expect(filterMarketSectionsByCategory(sections, "cat-bebidas")).toEqual([]);
+	});
+
+	it("never matches uncategorized products", () => {
+		expect(filterMarketSectionsByCategory(sections, "cat-sin")).toEqual([]);
 	});
 });
 
