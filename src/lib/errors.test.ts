@@ -69,6 +69,64 @@ describe("toUserMessage", () => {
 		expect(msg).toMatch(/inténtalo de nuevo/i);
 	});
 
+	it("un raise exception de 'no pertenece a ningún hogar' pide volver a entrar con el código", () => {
+		const err = {
+			message:
+				"regenerate_household_code: el usuario no pertenece a ningún hogar",
+			code: "P0001",
+		};
+		const msg = toUserMessage(err);
+		expect(msg).not.toMatch(/regenerate_household_code/);
+		expect(msg).toMatch(/vuelve a entrar con el código/i);
+	});
+
+	it("un raise exception de 'se requiere sesión autenticada' pide reabrir la app", () => {
+		const err = {
+			message: "leave_household: se requiere sesión autenticada",
+			code: "P0001",
+		};
+		expect(toUserMessage(err)).toMatch(/sesión no está lista/i);
+	});
+
+	it("PGRST301 (JWT caducado) dice que la sesión caducó", () => {
+		expect(toUserMessage({ message: "JWT expired", code: "PGRST301" })).toMatch(
+			/sesión caducó/i,
+		);
+	});
+
+	it("42501 (RLS/permiso) dice que no tienes permiso", () => {
+		expect(
+			toUserMessage({
+				message: "permission denied for table x",
+				code: "42501",
+			}),
+		).toMatch(/no tienes permiso/i);
+	});
+
+	it("23505 (unicidad) dice que ya existe, sin el nombre de la restricción", () => {
+		const msg = toUserMessage({
+			message: 'duplicate key value violates unique constraint "products_pkey"',
+			code: "23505",
+		});
+		expect(msg).not.toMatch(/constraint/);
+		expect(msg).toMatch(/ya existe/i);
+	});
+
+	it("PGRST116 (0 filas) dice que no se encontró", () => {
+		expect(toUserMessage({ message: "0 rows", code: "PGRST116" })).toMatch(
+			/no se encontró/i,
+		);
+	});
+
+	it("un código de PostgREST no mapeado cae al genérico, sin el .message crudo", () => {
+		expect(
+			toUserMessage({
+				message: "something raw and internal",
+				code: "PGRST200",
+			}),
+		).toMatch(/algo no funcionó/i);
+	});
+
 	it("cualquier otra cosa cae al mensaje genérico, nunca al .message crudo", () => {
 		expect(
 			toUserMessage(
