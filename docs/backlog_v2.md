@@ -25,6 +25,8 @@ abiertas. Cada punto pendiente tiene un issue que enlaza aquí.
 | 7 | Errores legibles + Sentry | Hecho; flecos en issue #14 |
 | 8 | Volver a entrar a un hogar sin perder nada | Pendiente — issue #12 |
 | 9 | Roles en el hogar (creador = admin) | Pendiente — issue #13 |
+| 10 | Filtro por categoría en la lista de Mercado | Pendiente — issue #15 |
+| 11 | Notificación push al finalizar una compra | Pendiente — issue #16 |
 
 ---
 
@@ -210,3 +212,64 @@ diferentes en el MVP."*) y ARF §5.1. A resolver con cuidado antes de implementa
   él, o basta ser miembro (plan actual)?
 - Beneficio secundario: reduce las expulsiones accidentales por regenerar, que es justo el problema
   que la "detección de expulsión" del plan de multi-hogar mitiga por el otro lado.
+
+## 10. Filtro por categoría en la lista de Mercado — issue #15
+
+El Catálogo ya tiene filtro por categoría: una fila de chips bajo el buscador, *single-select*,
+aplicada en memoria sobre `liveProducts` (commit `3b04106`). La misma capacidad tiene sentido en la
+lista de **Mercado**: con la compra a medias y una lista larga, poder ver solo "lo que falta de
+Lácteos" mientras estás en ese pasillo.
+
+El filtrado es una derivación en memoria sobre `list_items` (disciplina de las cuatro consultas), así
+que es barato y funciona sin red. No añade consulta.
+
+**Toca:**
+
+- Un control de filtro en Mercado. La cabecera ya está en su tope de dos iconos (identidad_visual
+  §5) y ya tiene el buscador desplegable, así que el filtro va dentro de ese panel o como fila de
+  chips bajo la cabecera, no como icono nuevo.
+- Reutilizar el componente y el patrón del filtro del Catálogo si encaja.
+
+**Preguntas abiertas:**
+
+- ¿Filtra a través de todas las secciones de supermercado a la vez, o por sección?
+- ¿El filtro se recuerda entre visitas (`localStorage`, como conveniencia por dispositivo) o se
+  reinicia al salir de Mercado?
+- ¿Cómo convive con el orden por categoría que Mercado ya aplica dentro de cada supermercado (D-031)?
+- ¿Una categoría a la vez (como el Catálogo) o varias?
+
+## 11. Notificación push al finalizar una compra — issue #16
+
+Cuando alguien finaliza una compra (por supermercado, D-001), avisar por **notificación push** a los
+demás miembros del hogar: en qué supermercado se cerró y, si se anotó al cerrar, el total.
+
+Caso: una persona hace la compra y la otra se entera al momento de que ya está hecha y cuánto costó,
+sin abrir la app.
+
+**Es una feature grande** y toca partes nuevas del stack. Necesita un spike o doc de diseño antes de
+implementar:
+
+- **Web Push en PWA de iOS.** Disponible desde iOS 16.4 solo con la PWA añadida a la pantalla de
+  inicio y permiso concedido. Ambos usuarios están en iPhone (CLAUDE.md), así que es viable, pero hay
+  que verificarlo en dispositivo real.
+- **Sin coste (D-018).** Web Push con VAPID empuja directo al endpoint del navegador, sin FCM ni
+  servicio de pago. El envío iría en una Edge Function de Supabase (capa gratis).
+- **El disparo es server-side, no desde el cliente.** Finalizar es offline-capable y pasa por la
+  cola (`sync_push`), así que el cliente puede estar sin red al cerrar. La notificación se dispara
+  cuando el lote de compra (`purchase_batch_id`) aterriza en la base de datos: webhook o trigger
+  sobre las lápidas de `list_items` con `removed_reason = 'purchased'`.
+- **Tabla de suscripciones push** por dispositivo/usuario y hogar. Con multi-hogar, se notifica a los
+  miembros de ese hogar concreto, nunca al que finalizó.
+- **Idempotencia.** Finalizar se reintenta desde la cola; la notificación no puede salir dos veces
+  (clave por `purchase_batch_id`).
+- **Service worker**: manejadores `push` y `notificationclick` (el SW ya es obligatorio, D-018).
+- **Tono** de la notificación: identidad_visual §8. Sin el total si no se anotó.
+
+**Preguntas abiertas:**
+
+- ¿Cuándo se pide el permiso de notificaciones: onboarding, primera finalización, un interruptor en
+  Ajustes?
+- ¿Disparo por webhook de base de datos, `pg_net` desde un trigger, o una Edge Function programada?
+- Si alguien finaliza dos supermercados seguidos, ¿dos notificaciones o una agrupada?
+- Si el destinatario no tiene la PWA instalada o no dio permiso, se degrada en silencio: ¿basta con
+  eso o hace falta un aviso dentro de la app?
