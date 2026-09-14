@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Plus, Search, Share2, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CategoryFilterChips } from "@/components/category-filter-chips";
 import { MarketSection } from "@/components/market/market-section";
@@ -26,9 +26,10 @@ import {
 import {
 	categoriesInMarketList,
 	filterMarketSectionsByCategory,
-	formatMarketListForSharing,
+	formatMarketSectionForSharing,
 	groupMarketListBySupermarket,
 	indexActiveListItemsByProduct,
+	type MarketSection as MarketSectionData,
 	searchProducts,
 } from "@/lib/selectors";
 import { shareText } from "@/lib/share";
@@ -231,8 +232,8 @@ export function MercadoScreen() {
 		setFinalizeConfirm(null);
 	}
 
-	async function handleShareList() {
-		const text = formatMarketListForSharing(sections);
+	async function handleShareSection(section: MarketSectionData) {
+		const text = formatMarketSectionForSharing(section);
 		if (!text) return;
 		const result = await shareText(text);
 		if (result !== "copied" && result !== "failed") return;
@@ -256,23 +257,6 @@ export function MercadoScreen() {
 				<div className="flex items-center justify-between">
 					<h1 className="text-26 font-bold wdth-75">Mercado</h1>
 					<div className="flex items-center">
-						{/* Dos iconos en la cabecera es el límite aceptado (identidad_visual §5). El de
-						compartir manda la lista entera (todas las secciones con pendientes); se oculta
-						cuando no hay nada que comprar. */}
-						{hasPending && (
-							<button
-								type="button"
-								aria-label="Compartir la lista de mercado"
-								onClick={() => void handleShareList()}
-								className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
-							>
-								<Share2
-									aria-hidden="true"
-									className="size-5"
-									strokeWidth={1.75}
-								/>
-							</button>
-						)}
 						<button
 							type="button"
 							aria-label={searchOpen ? "Cerrar buscador" : "Buscar producto"}
@@ -406,6 +390,7 @@ export function MercadoScreen() {
 								onFinalize={(itemIds, staying) =>
 									handleOpenFinalize(section.supermarket, itemIds, staying)
 								}
+								onShare={() => void handleShareSection(section)}
 							/>
 						);
 					})

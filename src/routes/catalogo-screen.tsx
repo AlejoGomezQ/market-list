@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet } from "@tanstack/react-router";
-import { Pencil, Plus, Settings } from "lucide-react";
+import { Pencil, Plus, Search, Settings, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
 	ProductDrawer,
@@ -55,6 +55,7 @@ export function CatalogoScreen() {
 		enabled: Boolean(householdId),
 	});
 
+	const [searchOpen, setSearchOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [categoryId, setCategoryId] = useState<string | null>(null);
 	const [drawer, setDrawer] = useState<ProductDrawerState | null>(null);
@@ -72,20 +73,17 @@ export function CatalogoScreen() {
 				.sort((a, b) => a.position - b.position),
 		[categories],
 	);
-	// Filtro por categoría en memoria, antes de la búsqueda por texto: se combinan (categoría Y
-	// texto). Sin categoría (`category_id === null`) queda fuera al elegir una concreta; visible
-	// con "Todas". Ninguna consulta nueva (CLAUDE.md).
-	const byCategory = useMemo(
-		() =>
-			categoryId === null
-				? liveProducts
-				: liveProducts.filter((p) => p.category_id === categoryId),
-		[liveProducts, categoryId],
-	);
-	const filtered = useMemo(
-		() => searchProducts(byCategory, search),
-		[byCategory, search],
-	);
+	// Búsqueda por texto y filtro por categoría no se combinan: si hay texto, reemplaza al filtro
+	// de categoría (busca en todo el catálogo vivo); si el texto está vacío, se aplica la
+	// categoría elegida. Sin categoría (`category_id === null`) es "Todas". No se limpia
+	// `categoryId` al buscar -- al borrar el texto, el filtro de categoría vuelve a aplicarse solo.
+	// Ninguna consulta nueva (CLAUDE.md).
+	const filtered = useMemo(() => {
+		if (search.trim()) return searchProducts(liveProducts, search);
+		return categoryId === null
+			? liveProducts
+			: liveProducts.filter((p) => p.category_id === categoryId);
+	}, [liveProducts, search, categoryId]);
 	const sections = useMemo(
 		() => groupProductsBySupermarket(filtered, supermarkets),
 		[filtered, supermarkets],
@@ -135,23 +133,51 @@ export function CatalogoScreen() {
 		<section className="flex h-full flex-col">
 			<header className="flex items-center justify-between px-4 py-6">
 				<h1 className="text-26 font-bold wdth-75">Catálogo</h1>
-				<Link
-					to="/catalogo/ajustes"
-					aria-label="Ajustes"
-					className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
-				>
-					<Settings aria-hidden="true" className="size-5" strokeWidth={1.75} />
-				</Link>
+				<div className="flex items-center">
+					<Link
+						to="/catalogo/ajustes"
+						aria-label="Ajustes"
+						className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
+					>
+						<Settings
+							aria-hidden="true"
+							className="size-5"
+							strokeWidth={1.75}
+						/>
+					</Link>
+					<button
+						type="button"
+						aria-label={searchOpen ? "Cerrar búsqueda" : "Buscar producto"}
+						onClick={() => {
+							setSearchOpen((open) => !open);
+							setSearch("");
+						}}
+						className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
+					>
+						{searchOpen ? (
+							<X aria-hidden="true" className="size-5" strokeWidth={1.75} />
+						) : (
+							<Search
+								aria-hidden="true"
+								className="size-5"
+								strokeWidth={1.75}
+							/>
+						)}
+					</button>
+				</div>
 			</header>
 
-			<div className="px-4 pb-3">
-				<Input
-					value={search}
-					onChange={(event) => setSearch(event.target.value)}
-					placeholder="Buscar producto…"
-					aria-label="Buscar producto"
-				/>
-			</div>
+			{searchOpen && (
+				<div className="px-4 pb-3">
+					<Input
+						autoFocus
+						value={search}
+						onChange={(event) => setSearch(event.target.value)}
+						placeholder="Buscar producto…"
+						aria-label="Buscar producto"
+					/>
+				</div>
+			)}
 
 			{/* Chips de categoría (§5): todo el catálogo vivo por `position`. Mismo componente,
 			aspecto y comportamiento que en el Mercado. */}
@@ -278,7 +304,7 @@ export function CatalogoScreen() {
 				type="button"
 				aria-label="Nuevo producto"
 				onClick={() => setDrawer({ mode: "create" })}
-				className="fixed bottom-[calc(var(--min-height-tap)+env(safe-area-inset-bottom,0px)+16px)] right-4 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground"
+				className="fixed bottom-[calc(var(--min-height-tap)+env(safe-area-inset-bottom,0px)+16px)] right-4 z-20 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground"
 			>
 				<Plus aria-hidden="true" className="size-[26px]" strokeWidth={1.75} />
 			</button>
