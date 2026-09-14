@@ -68,4 +68,13 @@ describe("App", () => {
 			await screen.findByRole("heading", { name: /mercado/i }),
 		).toBeInTheDocument();
 	});
+
+	it("con hogar ya vinculado, /onboarding?add=true sí abre onboarding en modo añadir (D-046)", async () => {
+		localStorage.clear();
+		setHouseholdLink(HOUSEHOLD);
+		renderAt("/onboarding?add=true");
+		expect(
+			await screen.findByRole("heading", { name: /añadir otro hogar/i }),
+		).toBeInTheDocument();
+	});
 });

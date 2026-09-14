@@ -13,6 +13,8 @@ import {
 	get as idbGet,
 	set as idbSet,
 } from "idb-keyval";
+import { householdTableKey } from "@/lib/queries/household-tables";
+import { cursorKey } from "@/lib/sync/delta-pull";
 import { cacheStore, queueStore } from "@/lib/sync/idb-stores";
 import {
 	SYNC_MUTATION_KEY,
@@ -20,6 +22,7 @@ import {
 	syncRetry,
 	syncRetryDelay,
 } from "@/lib/sync/mutation";
+import type { SyncedEntity } from "@/schemas/patch";
 
 /**
  * Fábrica del `QueryClient`, no un singleton importado a ciegas: así el orden de arranque queda
@@ -109,6 +112,32 @@ const PERSISTED_QUERY_KEY_PREFIXES = new Set([
 
 function isPersistedTableQuery(query: Query): boolean {
 	return PERSISTED_QUERY_KEY_PREFIXES.has(query.queryKey[0] as string);
+}
+
+/**
+ * Limpieza selectiva de un solo hogar (D-047): al salir de un hogar cuando quedan otros, o al
+ * cambiar de activo si se quiere acotar el uso de IndexedDB. Quita de la caché las 4 consultas de
+ * tabla de ese hogar y borra sus 4 cursores de delta pull. NO toca la cola de salida (los parches
+ * pendientes no llevan `household_id`; `sync_push` valida `is_member` por fila) ni la cuarentena.
+ *
+ * `clearPersistedSyncState` sigue siendo lo correcto para "salgo del último hogar": ahí sí se tira
+ * todo.
+ */
+export async function clearHouseholdSyncState(
+	householdId: string,
+	queryClient: QueryClient,
+): Promise<void> {
+	const entities = [...PERSISTED_QUERY_KEY_PREFIXES] as SyncedEntity[];
+	for (const entity of entities) {
+		queryClient.removeQueries({
+			queryKey: householdTableKey(entity, householdId),
+		});
+	}
+	await Promise.allSettled(
+		entities.map((entity) =>
+			idbDel(cursorKey(householdId, entity), queueStore),
+		),
+	);
 }
 
 /**

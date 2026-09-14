@@ -23,21 +23,38 @@ import type { SyncedEntity } from "@/schemas/patch";
  * El cursor vive en el almacén de la cola (`sync/idb-stores.ts`), no en la caché desechable: es
  * exactamente el tipo de dato que D-030 protege de un `buster` de la caché -- perder el cursor no
  * pierde datos, pero fuerza a volver a bajar la tabla entera la próxima vez, y eso es justo lo que
- * este mecanismo existe para evitar. Se indexa por tabla porque cada una avanza a su propio ritmo.
+ * este mecanismo existe para evitar.
+ *
+ * La clave lleva el `householdId` (D-044): un dispositivo puede seguir varios hogares y la
+ * sincronización opera solo sobre el activo. Sin el hogar en la clave, cambiar de hogar reutilizaría
+ * el cursor del anterior y se saltaría filas del nuevo en silencio (riesgo nº1 del plan multi-hogar,
+ * §8.1). Dentro de un hogar se sigue indexando por tabla, porque cada una avanza a su propio ritmo.
+ *
+ * ponytail: no se migran los cursores del formato viejo `sync:cursor:<entity>`. Un huérfano en
+ * IndexedDB es inocuo: como mucho, un delta pull completo de más la primera vez tras actualizar.
  */
-const CURSOR_KEY_PREFIX = "sync:cursor:";
+export function cursorKey(householdId: string, entity: SyncedEntity): string {
+	return `sync:cursor:${householdId}:${entity}`;
+}
 
 /** §6.3: margen de 5 s al guardar el cursor, para cubrir el hueco entre el `now()` de una
  * transacción y el momento en que se hace visible al confirmarse. Reprocesar unas pocas filas de
  * más no hace daño -- los upserts son idempotentes. */
 const CURSOR_SAFETY_MARGIN_MS = 5000;
 
-async function getCursor(entity: SyncedEntity): Promise<string | undefined> {
-	return await idbGet<string>(CURSOR_KEY_PREFIX + entity, queueStore);
+async function getCursor(
+	householdId: string,
+	entity: SyncedEntity,
+): Promise<string | undefined> {
+	return await idbGet<string>(cursorKey(householdId, entity), queueStore);
 }
 
-async function setCursor(entity: SyncedEntity, iso: string): Promise<void> {
-	await idbSet(CURSOR_KEY_PREFIX + entity, iso, queueStore);
+async function setCursor(
+	householdId: string,
+	entity: SyncedEntity,
+	iso: string,
+): Promise<void> {
+	await idbSet(cursorKey(householdId, entity), iso, queueStore);
 }
 
 interface TableConfig {
@@ -62,7 +79,7 @@ async function pullTable(
 	queryClient: QueryClient,
 ): Promise<void> {
 	if (!supabase) return;
-	const cursor = await getCursor(entity);
+	const cursor = await getCursor(householdId, entity);
 
 	let request = supabase
 		.from(entity)
@@ -110,7 +127,7 @@ async function pullTable(
 	const nextCursor = new Date(
 		new Date(maxUpdatedAt).getTime() - CURSOR_SAFETY_MARGIN_MS,
 	).toISOString();
-	await setCursor(entity, nextCursor);
+	await setCursor(householdId, entity, nextCursor);
 }
 
 /**

@@ -203,6 +203,12 @@ order by updated_at;
 Se aplica a las cuatro tablas. Las filas llegan como upsert por id, así que solaparse no hace daño.
 Se incluyen las lápidas: enterarse de un borrado es exactamente para lo que existen (D-026).
 
+**Con multi-hogar (D-043, D-044), `:hogar` es el hogar activo** y nada más: la sincronización no
+sigue en segundo plano los hogares no activos. El cursor deja de ser uno por tabla y pasa a ser uno
+por `(hogar, tabla)` —clave `sync:cursor:<householdId>:<entity>`—; si se comparte el cursor entre
+hogares, cambiar de activo se salta filas del nuevo en silencio. Cambiar de hogar recarga la app, así
+que el motor arranca limpio con el `householdId` nuevo.
+
 Esto solo funciona si `updated_at` se mueve en cada escritura. El `default now()` de la columna
 **solo dispara en el insert**, así que hace falta un trigger; sin él, el delta pull no baja jamás una
 fila editada y nadie se entera hasta que alguien pregunta por qué su cambio no llegó al otro móvil.

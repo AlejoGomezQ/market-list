@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AppError, isPostgresRaise } from "@/lib/errors";
+import { getHouseholdLink, type HouseholdLink } from "@/lib/household-link";
 import { supabase, supabaseConfigError } from "@/lib/supabase";
 
 /**
@@ -37,6 +38,34 @@ const regenerateResultSchema = z.object({
 });
 
 const leaveResultSchema = z.object({ left: z.literal(true) });
+
+const listHouseholdsResultSchema = z.array(
+	z.object({
+		household_id: z.uuid(),
+		name: z.string().min(1),
+		join_code: z.string().min(1),
+	}),
+);
+
+const copyCatalogResultSchema = z.object({
+	supermarkets_created: z.number().int().nonnegative(),
+	categories_created: z.number().int().nonnegative(),
+	products_copied: z.number().int().nonnegative(),
+});
+
+/**
+ * `p_household_id` explícito (D-048): con multi-hogar (D-043) un dispositivo pertenece a varios
+ * hogares, así que el servidor ya no puede derivar "el hogar del llamador". El parámetro es
+ * opcional y cae al hogar activo del vínculo local para no romper los llamadores que aún no pasan
+ * el id; la Fase C lo pasa siempre (`regenerateHouseholdCode(activeId)`).
+ */
+function requireHouseholdId(householdId?: string): string {
+	const id = householdId ?? getHouseholdLink()?.householdId;
+	if (!id) {
+		throw new AppError("No hay ningún hogar vinculado en este dispositivo.");
+	}
+	return id;
+}
 
 function requireSupabase() {
 	if (!supabase) {
@@ -91,9 +120,13 @@ export async function joinHousehold(code: string): Promise<CreatedHousehold> {
 	};
 }
 
-export async function regenerateHouseholdCode(): Promise<string> {
+export async function regenerateHouseholdCode(
+	householdId?: string,
+): Promise<string> {
 	const client = requireSupabase();
-	const { data, error } = await client.rpc("regenerate_household_code");
+	const { data, error } = await client.rpc("regenerate_household_code", {
+		p_household_id: requireHouseholdId(householdId),
+	});
 	if (error) throw error;
 	return regenerateResultSchema.parse(data).join_code;
 }
@@ -103,9 +136,58 @@ export async function regenerateHouseholdCode(): Promise<string> {
  * datos locales (vínculo en localStorage, caché e IndexedDB) la hace quien llama, tras el OK --
  * `ajustes-screen.tsx`. Para volver a entrar hace falta el código.
  */
-export async function leaveHousehold(): Promise<void> {
+export async function leaveHousehold(householdId?: string): Promise<void> {
 	const client = requireSupabase();
-	const { data, error } = await client.rpc("leave_household");
+	const { data, error } = await client.rpc("leave_household", {
+		p_household_id: requireHouseholdId(householdId),
+	});
 	if (error) throw error;
 	leaveResultSchema.parse(data);
+}
+
+/**
+ * Membresías del llamador (D-053): la fuente de verdad del selector de hogar. El vínculo local
+ * basta para el camino feliz; esto lo reconcilia (poda hogares de los que te expulsaron, D-040).
+ */
+export async function listHouseholds(): Promise<HouseholdLink[]> {
+	const client = requireSupabase();
+	const { data, error } = await client.rpc("list_households");
+	if (error) throw error;
+	return listHouseholdsResultSchema.parse(data).map((h) => ({
+		householdId: h.household_id,
+		name: h.name,
+		joinCode: h.join_code,
+	}));
+}
+
+export type CopyCatalogResult = {
+	supermarketsCreated: number;
+	categoriesCreated: number;
+	productsCopied: number;
+};
+
+/**
+ * Copia el catálogo de `sourceId` a `targetId` (D-049/D-050). Operación en línea y transaccional:
+ * si falla, no deja nada a medias. Exige ser miembro de ambos hogares (D-051, lo valida el
+ * servidor). Idempotente: repetir la copia devuelve todo a cero.
+ */
+export async function copyCatalog(
+	sourceId: string,
+	targetId: string,
+	opts?: { copySupermarkets?: boolean; copyCategories?: boolean },
+): Promise<CopyCatalogResult> {
+	const client = requireSupabase();
+	const { data, error } = await client.rpc("copy_catalog", {
+		p_source_household: sourceId,
+		p_target_household: targetId,
+		p_copy_supermarkets: opts?.copySupermarkets ?? true,
+		p_copy_categories: opts?.copyCategories ?? true,
+	});
+	if (error) throw error;
+	const result = copyCatalogResultSchema.parse(data);
+	return {
+		supermarketsCreated: result.supermarkets_created,
+		categoriesCreated: result.categories_created,
+		productsCopied: result.products_copied,
+	};
 }

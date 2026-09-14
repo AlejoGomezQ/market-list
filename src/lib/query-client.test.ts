@@ -1,11 +1,33 @@
-import { describe, expect, it } from "vitest";
-import {
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const idbStore = vi.hoisted(() => new Map<string, unknown>());
+vi.mock("idb-keyval", () => ({
+	createStore: (db: string, store: string) => `${db}:${store}`,
+	get: async (key: string) => idbStore.get(key),
+	set: async (key: string, value: unknown) => {
+		idbStore.set(key, value);
+	},
+	del: async (key: string) => {
+		idbStore.delete(key);
+	},
+	clear: async () => {
+		idbStore.clear();
+	},
+}));
+
+const { get: idbGet, set: idbSet } = await import("idb-keyval");
+const {
+	clearHouseholdSyncState,
 	clearPersistedSyncState,
 	createSyncQueryClient,
 	persistOptions,
 	queuePersistOptions,
-} from "./query-client";
-import { SYNC_MUTATION_KEY, syncPatches } from "./sync/mutation";
+} = await import("./query-client");
+const { SYNC_MUTATION_KEY, syncPatches } = await import("./sync/mutation");
+
+beforeEach(() => {
+	idbStore.clear();
+});
 
 describe("createSyncQueryClient", () => {
 	it("registers the sync mutation defaults synchronously, before returning the client -- CLAUDE.md regla #4 (no negociable)", () => {
@@ -54,10 +76,9 @@ describe("D-030 -- la caché es desechable, la cola de salida no: dos persistido
 		expect(persistOptions.persister).not.toBe(queuePersistOptions.persister);
 	});
 
-	it("clearPersistedSyncState nunca rechaza aunque un almacén no exista (salir del hogar)", async () => {
-		// jsdom no implementa IndexedDB, así que ambos `clear` rechazan aquí: la aserción es que
-		// `clearPersistedSyncState` los absorbe (allSettled) y resuelve igual, para que salir del
-		// hogar no enseñe un error crudo de IndexedDB al usuario.
+	it("clearPersistedSyncState nunca rechaza aunque un almacén falle (salir del hogar)", async () => {
+		// `clearPersistedSyncState` absorbe cualquier fallo de `clear` (allSettled) y resuelve igual,
+		// para que salir del hogar no enseñe un error crudo de IndexedDB al usuario.
 		await expect(clearPersistedSyncState()).resolves.toBeUndefined();
 	});
 
@@ -86,5 +107,37 @@ describe("D-030 -- la caché es desechable, la cola de salida no: dos persistido
 				{ state: { isPaused: true } } as any,
 			),
 		).toBe(true);
+	});
+});
+
+describe("clearHouseholdSyncState (D-047 -- salir de un hogar cuando quedan otros)", () => {
+	const ENTITIES = [
+		"supermarkets",
+		"categories",
+		"products",
+		"list_items",
+	] as const;
+	const LEFT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+	const KEPT = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+	it("borra las 4 consultas y los 4 cursores del hogar indicado, sin tocar los de otro", async () => {
+		const client = createSyncQueryClient();
+		for (const entity of ENTITIES) {
+			client.setQueryData([entity, LEFT], [{ id: "l" }]);
+			client.setQueryData([entity, KEPT], [{ id: "k" }]);
+			await idbSet(`sync:cursor:${LEFT}:${entity}`, "2026-01-01T00:00:00.000Z");
+			await idbSet(`sync:cursor:${KEPT}:${entity}`, "2026-01-01T00:00:00.000Z");
+		}
+
+		await clearHouseholdSyncState(LEFT, client);
+
+		for (const entity of ENTITIES) {
+			expect(client.getQueryData([entity, LEFT])).toBeUndefined();
+			expect(client.getQueryData([entity, KEPT])).toEqual([{ id: "k" }]);
+			expect(await idbGet(`sync:cursor:${LEFT}:${entity}`)).toBeUndefined();
+			expect(await idbGet(`sync:cursor:${KEPT}:${entity}`)).toBe(
+				"2026-01-01T00:00:00.000Z",
+			);
+		}
 	});
 });

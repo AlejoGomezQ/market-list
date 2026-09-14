@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { OnboardingSupermarkets } from "@/components/onboarding/onboarding-supermarkets";
 import { Button } from "@/components/ui/button";
@@ -31,13 +31,40 @@ type Step =
  * documenta por qué no pasan por la mutación de sincronización). Ninguna de las dos es optimista:
  * son operaciones de una vez por dispositivo, no una de las tres frecuentes de RNF-001, así que un
  * botón deshabilitado mientras se resuelve la llamada es aceptable aquí y en ningún otro sitio.
+ *
+ * Modo "añadir otro hogar" (`?add=1`, D-046): la misma pantalla, pero abierta desde Ajustes teniendo
+ * ya un hogar. Cambia la copia, aparece un "Cancelar" visible (en PWA a pantalla completa no hay
+ * botón de atrás, experiencia_usuario §11) y al terminar recarga la app sobre el hogar nuevo, ya
+ * activo (`finishLinking`), igual que "cambiar de hogar" y "salir del hogar" (D-044).
  */
 export function OnboardingScreen() {
 	const navigate = useNavigate();
+	const add = useSearch({ from: "/onboarding", select: (s) => s.add }) ?? false;
 	const [step, setStep] = useState<Step>({ kind: "choice" });
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [codeCopied, setCodeCopied] = useState(false);
+
+	function done() {
+		if (add) {
+			// Recarga completa: remonta `useSyncEngine` con el hogar nuevo (D-044). `navigate` dejaría
+			// vivo el motor del hogar anterior.
+			window.location.assign("/");
+		} else {
+			navigate({ to: "/" });
+		}
+	}
+
+	const cancelButton = add ? (
+		<Button
+			type="button"
+			variant="outline"
+			className="min-h-[var(--min-height-tap)] w-full text-17"
+			onClick={() => navigate({ to: "/catalogo/ajustes" })}
+		>
+			Cancelar
+		</Button>
+	) : null;
 
 	async function finishLinking(household: {
 		householdId: string;
@@ -98,7 +125,7 @@ export function OnboardingScreen() {
 			await ensureAnonymousSession();
 			const household = await joinHouseholdRpc(code);
 			await finishLinking(household);
-			navigate({ to: "/" });
+			done();
 		} catch (err) {
 			reportError(err, { op: "join_household" });
 			setError(
@@ -115,7 +142,9 @@ export function OnboardingScreen() {
 		<section className="flex min-h-dvh flex-col justify-center gap-6 px-4 py-6">
 			{step.kind === "choice" && (
 				<>
-					<h1 className="text-26 font-bold wdth-75">¿Empezamos?</h1>
+					<h1 className="text-26 font-bold wdth-75">
+						{add ? "Añadir otro hogar" : "¿Empezamos?"}
+					</h1>
 					<div className="flex flex-col gap-3">
 						<Button
 							className="min-h-[var(--min-height-tap)] w-full text-17"
@@ -130,6 +159,7 @@ export function OnboardingScreen() {
 						>
 							Unirme con un código
 						</Button>
+						{cancelButton}
 					</div>
 				</>
 			)}
@@ -161,6 +191,7 @@ export function OnboardingScreen() {
 					>
 						Crear
 					</Button>
+					{cancelButton}
 				</form>
 			)}
 
@@ -196,6 +227,7 @@ export function OnboardingScreen() {
 					>
 						Unirme
 					</Button>
+					{cancelButton}
 				</form>
 			)}
 
@@ -252,10 +284,7 @@ export function OnboardingScreen() {
 			)}
 
 			{step.kind === "supermarkets" && (
-				<OnboardingSupermarkets
-					householdId={step.householdId}
-					onDone={() => navigate({ to: "/" })}
-				/>
+				<OnboardingSupermarkets householdId={step.householdId} onDone={done} />
 			)}
 		</section>
 	);

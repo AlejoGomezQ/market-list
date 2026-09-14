@@ -192,8 +192,11 @@ Cada operación tiene un efecto **local inmediato** (optimista, es lo que ve el 
 | Finalizar compra | RF-017, D-001 | Un lote de parches sobre **una lista explícita de ids**: `removed_at`, `removed_reason = 'purchased'`. |
 | Deshacer finalización | D-032 | Otro lote de parches sobre los mismos ids, poniendo `removed_at` a nulo (posible gracias a §4.1). |
 | Crear hogar | RF-022 | Crea `households`, la membresía y siembra las categorías de RF-020. |
-| Unirse al hogar | RF-022 | Añade membresía a partir del código. |
-| Regenerar código | D-014 | Sustituye `join_code`. |
+| Unirse al hogar | RF-022 | Añade membresía a partir del código. Se reutiliza para "añadir otro hogar" (D-046). |
+| Regenerar código | D-014, D-048 | Sustituye el `join_code` del hogar indicado por `p_household_id` y expulsa a los demás dispositivos de ese hogar (D-040). |
+| Salir del hogar | D-048 | `leave_household(p_household_id)`: borra solo la membresía del llamador en ese hogar. |
+| Listar hogares | D-053 | `list_households()`: las membresías del llamador; fuente de verdad del selector de hogar activo. |
+| Copiar catálogo | D-049, D-050 | `copy_catalog(origen, destino, …)`: **la única operación entre dos hogares**. `security definer` con `is_member` sobre ambos, una transacción. Excepción acotada a D-039 (§ más abajo). |
 
 **Finalizar compra recibe ids explícitos, no una condición.** Ejecuta sobre los items que estaban
 marcados cuando se pulsó el botón, no sobre "todo lo marcado ahora". Es lo que hace determinista el
@@ -205,6 +208,16 @@ separada sería un segundo camino de escritura, sin cola, sin reintentos y sin c
 justo para la acción que se pulsa en la fila de la caja, que es donde peor va la cobertura. Pasando
 por `sync_push` sale gratis: funciona sin conexión, deshacer es otro lote, y C-002 se sigue
 cumpliendo porque los ids son explícitos.
+
+**`copy_catalog` es la excepción, y está acotada.** Copiar el catálogo de un hogar a otro (D-049) sí
+tiene función propia y no pasa por `sync_push`. Se admite porque cumple cuatro condiciones que
+`finish_purchase` no cumplía: es una operación **administrativa**, **en línea** (nunca offline),
+**entre dos hogares** (un lote de parches asume un solo `household_id` vía RLS), y debe ser
+**atómica** (cien filas a medio copiar es peor que no copiar). Tiene el mismo precedente que la
+siembra de las siete categorías de RF-020 que `create_household` ya hace server-side. El hogar
+destino recibe lo copiado por su delta pull normal; el dispositivo que inicia la copia fuerza un
+delta pull al terminar. No abre la puerta a más funciones de dominio: cualquier escritura frecuente o
+con caso offline sigue yendo por `sync_push`.
 
 **Agregar a la lista es una intención, no una fila.** Si A y B agregan leche casi a la vez, cada uno
 con su id de cliente, llegan dos filas con el mismo `product_id` activo y el índice único parcial
