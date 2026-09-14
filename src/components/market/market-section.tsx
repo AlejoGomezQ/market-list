@@ -1,20 +1,34 @@
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Share2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRowFlip } from "@/components/market/use-row-flip";
 import { QuantityControl } from "@/components/quantity-control";
 import { Button } from "@/components/ui/button";
-import { splitByChecked, supermarketColorClass } from "@/lib/selectors";
+import {
+	formatQuantityLabel,
+	splitByChecked,
+	supermarketColorClass,
+} from "@/lib/selectors";
 import { cn } from "@/lib/utils";
-import type { ListItem, Product, Supermarket } from "@/schemas/domain";
+import type {
+	Category,
+	ListItem,
+	Product,
+	Supermarket,
+} from "@/schemas/domain";
 
 interface MarketSectionProps {
 	supermarket: Supermarket | null;
-	entries: Array<{ item: ListItem; product: Product }>;
+	entries: Array<{
+		item: ListItem;
+		product: Product;
+		category: Category | null;
+	}>;
 	collapsed: boolean;
 	onToggleCollapse: () => void;
 	onToggleChecked: (item: ListItem) => void;
 	onQuantityChange: (item: ListItem, delta: 1 | -1) => void;
 	onFinalize: (checkedIds: string[], stayingCount: number) => void;
+	onShare: () => void;
 }
 
 /**
@@ -34,6 +48,7 @@ export function MarketSection({
 	onToggleChecked,
 	onQuantityChange,
 	onFinalize,
+	onShare,
 }: MarketSectionProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const { pending, checked } = splitByChecked(entries);
@@ -53,43 +68,62 @@ export function MarketSection({
 			{/* La banda es el elemento memorable de la app (identidad_visual §4): franja a sangre
 			completa, color sólido del supermercado, rótulo condensado pesado en blanco y contador
 			a la derecha. Se queda pegada arriba mientras se recorre su sección -- el cartel del
-			pasillo. "Sin asignar" va sin color (bg-rule), "es la ausencia de sitio" (§2). */}
-			<button
-				type="button"
-				onClick={onToggleCollapse}
-				aria-expanded={!collapsed}
+			pasillo. "Sin asignar" va sin color (bg-rule), "es la ausencia de sitio" (§2). Es un
+			<div> en vez de un <button> porque aloja dos zonas de toque (plegar y compartir): un
+			<button> no puede anidar otro. */}
+			<div
 				className={cn(
-					"sticky top-0 z-10 flex min-h-[var(--min-height-tap)] w-full items-center justify-between px-4",
+					"sticky top-0 z-10 flex min-h-[var(--min-height-tap)] w-full items-center px-4",
 					supermarket
 						? supermarketColorClass(supermarket.position)
 						: "bg-[var(--rule)]",
 				)}
 			>
-				<span
-					className={cn(
-						"text-20 font-bold uppercase tracking-[var(--tracking-label)] wdth-75",
-						supermarket ? "text-white" : "text-muted-foreground",
-					)}
+				<button
+					type="button"
+					onClick={onToggleCollapse}
+					aria-expanded={!collapsed}
+					className="flex min-h-[var(--min-height-tap)] flex-1 items-center justify-between"
 				>
-					{name}
-				</span>
-				<span
-					className={cn(
-						"flex items-center gap-2.5 text-14 tabular-nums",
-						supermarket ? "text-white/85" : "text-muted-foreground",
-					)}
-				>
-					{pending.length} de {entries.length}
-					<ChevronDown
-						aria-hidden="true"
-						strokeWidth={1.75}
+					<span
 						className={cn(
-							"size-[18px] transition-transform",
-							collapsed && "-rotate-90",
+							"text-20 font-bold uppercase tracking-[var(--tracking-label)] wdth-75",
+							supermarket ? "text-white" : "text-muted-foreground",
 						)}
-					/>
-				</span>
-			</button>
+					>
+						{name}
+					</span>
+					<span
+						className={cn(
+							"flex items-center gap-2.5 text-14 tabular-nums",
+							supermarket ? "text-white/85" : "text-muted-foreground",
+						)}
+					>
+						{pending.length} de {entries.length}
+						<ChevronDown
+							aria-hidden="true"
+							strokeWidth={1.75}
+							className={cn(
+								"size-[18px] transition-transform",
+								collapsed && "-rotate-90",
+							)}
+						/>
+					</span>
+				</button>
+				{pending.length > 0 && (
+					<button
+						type="button"
+						aria-label={`Compartir lo que falta en ${name}`}
+						onClick={onShare}
+						className={cn(
+							"flex size-[var(--size-tap)] shrink-0 items-center justify-center",
+							supermarket ? "text-white" : "text-muted-foreground",
+						)}
+					>
+						<Share2 aria-hidden="true" className="size-5" strokeWidth={1.75} />
+					</button>
+				)}
+			</div>
 
 			{!collapsed && (
 				<>
@@ -155,13 +189,13 @@ function MarketRow({
 	onToggleChecked,
 	onQuantityChange,
 }: {
-	entry: { item: ListItem; product: Product };
+	entry: { item: ListItem; product: Product; category: Category | null };
 	editingQuantity: boolean;
 	onToggleQuantityEditing: () => void;
 	onToggleChecked: (item: ListItem) => void;
 	onQuantityChange: (item: ListItem, delta: 1 | -1) => void;
 }) {
-	const { item, product } = entry;
+	const { item, product, category } = entry;
 
 	return (
 		// <label> con un <input type="checkbox"> real (lint/a11y/useSemanticElements): el navegador
@@ -223,21 +257,20 @@ function MarketRow({
 					onQuantityTap={onToggleQuantityEditing}
 				/>
 			) : (
-				item.quantity > 1 && (
-					// La cantidad solo se imprime si es mayor que 1, como cifra, no como control
-					// (experiencia_usuario §4): tocarla abre el contador completo en su sitio.
-					<button
-						type="button"
-						aria-label={`Cambiar cantidad de ${product.name}, ahora ${item.quantity}`}
-						onClick={(event) => {
-							event.stopPropagation();
-							onToggleQuantityEditing();
-						}}
-						className="flex min-h-[var(--min-height-tap)] min-w-[var(--min-width-tap)] items-center justify-center text-17 tabular-nums text-foreground"
-					>
-						{item.quantity}
-					</button>
-				)
+				// La cantidad siempre se imprime, incluida 1, como cifra, no como control
+				// (CLAUDE.md): tocarla abre el contador completo en su sitio. Frutas y verduras
+				// llevan sufijo "lb" (`formatQuantityLabel`, `isProduceCategory`).
+				<button
+					type="button"
+					aria-label={`Cambiar cantidad de ${product.name}, ahora ${item.quantity}`}
+					onClick={(event) => {
+						event.stopPropagation();
+						onToggleQuantityEditing();
+					}}
+					className="flex min-h-[var(--min-height-tap)] min-w-[var(--min-width-tap)] items-center justify-center text-17 tabular-nums text-foreground"
+				>
+					{formatQuantityLabel(item.quantity, category)}
+				</button>
 			)}
 		</label>
 	);
