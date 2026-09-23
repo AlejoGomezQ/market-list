@@ -64,58 +64,77 @@ describe("buildAddToList", () => {
 });
 
 describe("buildSetQuantity / buildRemoveFromList", () => {
-	it("cambiar cantidad es un parche de un solo campo (RF-011)", () => {
+	it("cambiar cantidad lleva household_id/product_id además de quantity (parche autosuficiente si el alta quedó en cuarentena)", () => {
 		const patch = buildSetQuantity(listItem({ quantity: 1 }), 2, ts);
-		expect(patch.fields).toEqual({ quantity: 2 });
+		expect(patch.fields).toEqual({
+			household_id: hh,
+			product_id: "p-1",
+			quantity: 2,
+		});
 	});
 
-	it("quitar de la lista es removed_at + removed_reason: 'removed' (RF-010)", () => {
+	it("quitar de la lista es removed_at + removed_reason: 'removed', más household_id/product_id (RF-010)", () => {
 		const patch = buildRemoveFromList(listItem(), ts);
-		expect(patch.fields).toEqual({ removed_at: ts, removed_reason: "removed" });
+		expect(patch.fields).toEqual({
+			household_id: hh,
+			product_id: "p-1",
+			removed_at: ts,
+			removed_reason: "removed",
+		});
 	});
 });
 
 const batch = "99999999-9999-9999-9999-999999999999";
 
+// li-1/li-2/li-3 comparten product_id/household_id solo por brevedad del fixture -- los builders
+// no asumen unicidad de product_id entre items del lote, cada patch lleva el suyo propio.
+const items = [
+	listItem({ id: "li-1", product_id: "p-1" }),
+	listItem({ id: "li-2", product_id: "p-2" }),
+	listItem({ id: "li-3", product_id: "p-3" }),
+];
+
 describe("buildFinalizePurchase (RF-017, D-001)", () => {
-	it("solo toca los ids explícitos que recibe, no reconsulta 'todo lo marcado'", () => {
-		const markedAtClick = ["li-1", "li-2"];
+	it("solo toca los items explícitos que recibe, no reconsulta 'todo lo marcado'", () => {
+		const markedAtClick = items.slice(0, 2);
 		const patches = buildFinalizePurchase(markedAtClick, ts, batch);
 
 		expect(patches).toHaveLength(2);
 		expect(patches.map((p) => p.id)).toEqual(["li-1", "li-2"]);
-		for (const patch of patches) {
-			expect(patch.entity).toBe("list_items");
-			expect(patch.fields).toEqual({
-				removed_at: ts,
-				removed_reason: "purchased",
-				purchase_batch_id: batch,
-			});
-		}
+		expect(patches[0].fields).toEqual({
+			household_id: hh,
+			product_id: "p-1",
+			removed_at: ts,
+			removed_reason: "purchased",
+			purchase_batch_id: batch,
+		});
+		expect(patches[1].fields).toEqual({
+			household_id: hh,
+			product_id: "p-2",
+			removed_at: ts,
+			removed_reason: "purchased",
+			purchase_batch_id: batch,
+		});
 	});
 
 	it("todos los items del lote comparten el mismo purchase_batch_id", () => {
-		const patches = buildFinalizePurchase(["li-1", "li-2", "li-3"], ts, batch);
+		const patches = buildFinalizePurchase(items, ts, batch);
 		const batchIds = new Set(patches.map((p) => p.fields.purchase_batch_id));
 		expect(batchIds).toEqual(new Set([batch]));
 	});
 
 	it("con total: purchase_total viaja en cada parche del lote (backlog §6)", () => {
-		const patches = buildFinalizePurchase(["li-1", "li-2"], ts, batch, 57.3);
+		const patches = buildFinalizePurchase(items.slice(0, 2), ts, batch, 57.3);
 		for (const patch of patches) {
-			expect(patch.fields).toEqual({
-				removed_at: ts,
-				removed_reason: "purchased",
-				purchase_batch_id: batch,
-				purchase_total: 57.3,
-			});
+			expect(patch.fields.purchase_total).toBe(57.3);
+			expect(patch.fields.purchase_batch_id).toBe(batch);
 		}
 	});
 
 	it("sin total (null / undefined): la clave purchase_total no aparece", () => {
 		for (const patches of [
-			buildFinalizePurchase(["li-1"], ts, batch),
-			buildFinalizePurchase(["li-1"], ts, batch, null),
+			buildFinalizePurchase([items[0]], ts, batch),
+			buildFinalizePurchase([items[0]], ts, batch, null),
 		]) {
 			expect(patches[0].fields).not.toHaveProperty("purchase_total");
 			expect(patches[0].fields.purchase_batch_id).toBe(batch);
@@ -125,9 +144,9 @@ describe("buildFinalizePurchase (RF-017, D-001)", () => {
 	it("C-002: un item agregado o marcado después de capturar el conjunto no aparece en el lote", () => {
 		// Al pulsar "Finalizar compra" se captura el conjunto marcado en ESE instante (li-1). Un
 		// producto que el otro dispositivo agrega y marca mientras la confirmación está abierta
-		// (li-9, aquí simulado) nunca entra en `itemIds`, así que nunca puede entrar en el lote --
-		// la exclusión es estructural, no una condición que se re-evalúe al confirmar.
-		const capturedAtClick = ["li-1"];
+		// (li-9, aquí simulado) nunca entra en el arreglo capturado, así que nunca puede entrar en
+		// el lote -- la exclusión es estructural, no una condición que se re-evalúe al confirmar.
+		const capturedAtClick = [items[0]];
 		const patches = buildFinalizePurchase(capturedAtClick, ts, batch);
 		expect(patches.map((p) => p.id)).not.toContain("li-9");
 		expect(patches).toHaveLength(1);
@@ -139,20 +158,24 @@ describe("buildFinalizePurchase (RF-017, D-001)", () => {
 });
 
 describe("buildSetPurchaseTotal (backlog §6)", () => {
-	it("pone el mismo purchase_total en cada lápida del lote", () => {
-		const patches = buildSetPurchaseTotal(["li-1", "li-2", "li-3"], ts, 85400);
+	it("pone el mismo purchase_total en cada lápida del lote, con household_id/product_id propios", () => {
+		const patches = buildSetPurchaseTotal(items, ts, 85400);
 		expect(patches.map((p) => p.id)).toEqual(["li-1", "li-2", "li-3"]);
-		for (const patch of patches) {
+		for (const [i, patch] of patches.entries()) {
 			expect(patch.entity).toBe("list_items");
 			expect(patch.ts).toBe(ts);
-			expect(patch.fields).toEqual({ purchase_total: 85400 });
+			expect(patch.fields).toEqual({
+				household_id: hh,
+				product_id: items[i].product_id,
+				purchase_total: 85400,
+			});
 		}
 	});
 
 	it("con null limpia el total (compra cerrada por error con cifra)", () => {
-		const patches = buildSetPurchaseTotal(["li-1", "li-2"], ts, null);
+		const patches = buildSetPurchaseTotal(items.slice(0, 2), ts, null);
 		for (const patch of patches) {
-			expect(patch.fields).toEqual({ purchase_total: null });
+			expect(patch.fields.purchase_total).toBeNull();
 		}
 	});
 
@@ -162,16 +185,16 @@ describe("buildSetPurchaseTotal (backlog §6)", () => {
 });
 
 describe("buildUndoFinalize (D-032)", () => {
-	it("restaura los mismos ids poniendo removed_at, purchase_batch_id y purchase_total a null", () => {
+	it("restaura los mismos items poniendo removed_at, purchase_batch_id y purchase_total a null", () => {
 		const ts2 = "2026-09-06T10:05:00.000Z";
-		const finalizedIds = buildFinalizePurchase(["li-1", "li-2"], ts, batch).map(
-			(p) => p.id,
-		);
-		const patches = buildUndoFinalize(finalizedIds, ts2);
+		const finalized = items.slice(0, 2);
+		const patches = buildUndoFinalize(finalized, ts2);
 
 		expect(patches.map((p) => p.id)).toEqual(["li-1", "li-2"]);
-		for (const patch of patches) {
+		for (const [i, patch] of patches.entries()) {
 			expect(patch.fields).toEqual({
+				household_id: hh,
+				product_id: finalized[i].product_id,
 				removed_at: null,
 				purchase_batch_id: null,
 				purchase_total: null,

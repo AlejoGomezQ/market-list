@@ -16,6 +16,7 @@ const {
 	addToQuarantine,
 	getQuarantineSnapshot,
 	loadQuarantine,
+	removeFromQuarantine,
 	subscribeQuarantine,
 } = await import("./quarantine");
 
@@ -26,8 +27,12 @@ const patch = {
 	fields: { name: "Supermu" },
 };
 
-beforeEach(() => {
+beforeEach(async () => {
 	idbStore.clear();
+	// El snapshot en memoria del módulo no se resetea solo entre tests (mismo motivo que en
+	// producción: no se borra nada sin más) -- `loadQuarantine` lo repone desde el almacén, que
+	// acabamos de vaciar.
+	await loadQuarantine();
 });
 
 describe("quarantine (estrategia_sincronizacion §5.3, §9: nunca se borra solo y en silencio)", () => {
@@ -94,6 +99,46 @@ describe("quarantine (estrategia_sincronizacion §5.3, §9: nunca se borra solo 
 		const loaded = await loadQuarantine();
 
 		expect(loaded).toHaveLength(1);
+		expect(getQuarantineSnapshot()).toHaveLength(1);
+	});
+
+	it("removeFromQuarantine quita solo la entrada pedida, persiste y notifica (reintentar/descartar)", async () => {
+		const other = { ...patch, id: "sm-2" };
+		await addToQuarantine({
+			patch,
+			reason: "roto",
+			quarantinedAt: "2026-09-06T10:01:00.000Z",
+		});
+		await addToQuarantine({
+			patch: other,
+			reason: "también roto",
+			quarantinedAt: "2026-09-06T10:02:00.000Z",
+		});
+
+		const listener = vi.fn();
+		const unsubscribe = subscribeQuarantine(listener);
+
+		await removeFromQuarantine("sm-1");
+
+		expect(listener).toHaveBeenCalledTimes(1);
+		expect(getQuarantineSnapshot().map((e) => e.patch.id)).toEqual(["sm-2"]);
+		expect(
+			(idbStore.get("quarantine") as { patch: { id: string } }[]).map(
+				(e) => e.patch.id,
+			),
+		).toEqual(["sm-2"]);
+		unsubscribe();
+	});
+
+	it("removeFromQuarantine con un id que no está en cuarentena no hace nada raro", async () => {
+		await addToQuarantine({
+			patch,
+			reason: "roto",
+			quarantinedAt: "2026-09-06T10:01:00.000Z",
+		});
+
+		await removeFromQuarantine("no-existe");
+
 		expect(getQuarantineSnapshot()).toHaveLength(1);
 	});
 });

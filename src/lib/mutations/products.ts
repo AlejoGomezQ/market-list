@@ -84,7 +84,14 @@ export function buildDeleteProduct(
 			entity: "list_items",
 			id: activeListItem.id,
 			ts,
-			fields: { removed_at: ts, removed_reason: "removed" },
+			fields: {
+				// household_id/product_id: mismo motivo que el resto de parches de edición sobre
+				// list_items -- autosuficiente si el alta original quedó en cuarentena.
+				household_id: activeListItem.household_id,
+				product_id: activeListItem.product_id,
+				removed_at: ts,
+				removed_reason: "removed",
+			},
 		});
 	}
 	return patches;

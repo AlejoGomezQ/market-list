@@ -42,7 +42,14 @@ export function searchProducts(products: Product[], query: string): Product[] {
 export interface MarketSection {
 	/** `null` es el grupo "Sin asignar" (D-002). */
 	supermarket: Supermarket | null;
-	entries: Array<{ item: ListItem; product: Product }>;
+	/** `category` es la categoría viva del producto, o `null` si no tiene o si la suya fue
+	 * borrada (mismo criterio de "sin categoría" que ya aplica el orden por `position`).
+	 * Alimenta `isProduceCategory` para el sufijo en libras. */
+	entries: Array<{
+		item: ListItem;
+		product: Product;
+		category: Category | null;
+	}>;
 }
 
 /**
@@ -69,16 +76,15 @@ export function groupMarketListBySupermarket(
 	);
 	// Igual que con el supermercado borrado (§4.3): una categoría borrada no debe congelar su
 	// posición para siempre. Un producto que apuntaba a ella cae al final del grupo, como si no
-	// tuviera categoría, en vez de ordenarse por una posición fantasma.
-	const categoryPosition = new Map(
-		categories
-			.filter((c) => c.deleted_at === null)
-			.map((c) => [c.id, c.position]),
+	// tuviera categoría, en vez de ordenarse por una posición fantasma. Se guarda la categoría
+	// completa (no solo su `position`) porque el entry la necesita para `isProduceCategory`.
+	const liveCategoryById = new Map(
+		categories.filter((c) => c.deleted_at === null).map((c) => [c.id, c]),
 	);
 
 	const bySupermarket = new Map<
 		string | null,
-		Array<{ item: ListItem; product: Product }>
+		Array<{ item: ListItem; product: Product; category: Category | null }>
 	>();
 
 	for (const item of indexActiveListItemsByProduct(listItems).values()) {
@@ -89,9 +95,12 @@ export function groupMarketListBySupermarket(
 			product.supermarket_id && liveSupermarketById.has(product.supermarket_id)
 				? product.supermarket_id
 				: null;
+		const category = product.category_id
+			? (liveCategoryById.get(product.category_id) ?? null)
+			: null;
 
 		const entries = bySupermarket.get(supermarketId) ?? [];
-		entries.push({ item, product });
+		entries.push({ item, product, category });
 		bySupermarket.set(supermarketId, entries);
 	}
 
@@ -101,7 +110,8 @@ export function groupMarketListBySupermarket(
 	): number => {
 		const posOf = (p: Product) =>
 			p.category_id
-				? (categoryPosition.get(p.category_id) ?? Number.POSITIVE_INFINITY)
+				? (liveCategoryById.get(p.category_id)?.position ??
+					Number.POSITIVE_INFINITY)
 				: Number.POSITIVE_INFINITY;
 		return posOf(a.product) - posOf(b.product);
 	};
@@ -145,32 +155,107 @@ export function splitByChecked<T extends { item: ListItem }>(
 }
 
 /**
- * Texto para compartir "lo que falta" de la lista de mercado entera con alguien que no tiene la app
- * (backlog_v2 §3). Recibe la lista ya agrupada por supermercado (`groupMarketListBySupermarket`) y
- * concatena una sección por cada supermercado con pendientes. El caso de uso es WhatsApp: la
- * cabecera va envuelta en asteriscos (`*Supermu*`), que WhatsApp renderiza en negrilla y otras apps
- * muestran literal -- compromiso aceptado. Sin emojis (D-035, identidad_visual §8): el bullet es `•`
- * (U+2022), un signo tipográfico, no un pictograma. Por sección: cabecera, una línea en blanco y una
- * línea `• {nombre}` por producto pendiente (`!item.checked`); la cantidad se imprime como sufijo
- * ` x{n}` solo si es mayor que 1 (identidad_visual §4), nunca la marca. Las secciones sin pendientes
- * se omiten y las que quedan se unen con una línea en blanco. Sin ningún pendiente en toda la lista
- * devuelve `""` -- el llamador ya oculta el botón en ese caso, esto es la red de seguridad.
+ * Detecta frutas/verduras por nombre de categoría, sin tocar el esquema (decisión de producto:
+ * `quantity` sigue siendo un entero, "libras" es solo una etiqueta de presentación). Cubre
+ * "Frutas", "Verduras", "Frutas y verduras" y variantes de mayúsculas/tildes.
+ */
+export function isProduceCategory(
+	category: Category | null | undefined,
+): boolean {
+	if (!category) return false;
+	const name = category.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+	return name.includes("fruta") || name.includes("verdura");
+}
+
+/**
+ * Sufijo de cantidad compartido entre la fila del Mercado y el mensaje de WhatsApp: `{n}` para
+ * cualquier producto, `{n} lb` para frutas/verduras (`isProduceCategory`). Siempre se imprime,
+ * incluida la cantidad 1 -- antes se omitía y dejaba la cifra sin forma de tocarla para abrir el
+ * contador.
+ */
+export function formatQuantityLabel(
+	quantity: number,
+	category: Category | null,
+): string {
+	return isProduceCategory(category) ? `${quantity} lb` : `${quantity}`;
+}
+
+/**
+ * Texto para compartir "lo que falta" de UNA sección (un supermercado) con alguien que no tiene la
+ * app (backlog_v2 §3). El caso de uso es WhatsApp: la cabecera va envuelta en asteriscos
+ * (`*Supermu*`), que WhatsApp renderiza en negrilla y otras apps muestran literal -- compromiso
+ * aceptado. Sin emojis (D-035, identidad_visual §8): el bullet es `•` (U+2022), un signo
+ * tipográfico, no un pictograma. Cabecera, una línea en blanco y una línea `• {nombre} x{cantidad}`
+ * por producto pendiente (`!item.checked`), nunca la marca; la cantidad usa `formatQuantityLabel`
+ * (siempre visible, "lb" para frutas/verduras). Sin pendientes en la sección devuelve `""` -- el
+ * llamador ya oculta el botón en ese caso, esto es la red de seguridad.
+ */
+export function formatMarketSectionForSharing(section: MarketSection): string {
+	const lines = section.entries
+		.filter((entry) => !entry.item.checked)
+		.map(
+			(entry) =>
+				`• ${entry.product.name} x${formatQuantityLabel(entry.item.quantity, entry.category)}`,
+		);
+	if (lines.length === 0) return "";
+	const header = `*${section.supermarket?.name ?? "Sin asignar"}*`;
+	return `${header}\n\n${lines.join("\n")}`;
+}
+
+/**
+ * Texto para compartir "lo que falta" de la lista de mercado entera (backlog_v2 §3): una sección
+ * por cada supermercado con pendientes (`formatMarketSectionForSharing`), unidas por una línea en
+ * blanco. Las secciones sin pendientes se omiten. Sin ningún pendiente en toda la lista devuelve
+ * `""`.
  */
 export function formatMarketListForSharing(sections: MarketSection[]): string {
-	const blocks: string[] = [];
+	return sections
+		.map(formatMarketSectionForSharing)
+		.filter((block) => block !== "")
+		.join("\n\n");
+}
+
+/**
+ * Categorías vivas presentes entre los items de una lista de mercado ya agrupada, ordenadas por
+ * `position` (D-031). Alimenta los chips de filtro del Mercado: a diferencia del Catálogo, aquí no
+ * se ofrecen todas las categorías del hogar -- ofrecer "Limpieza" cuando nada de limpieza está en la
+ * lista es ruido. Deriva de `groupMarketListBySupermarket`, no de una consulta nueva.
+ */
+export function categoriesInMarketList(
+	sections: MarketSection[],
+	categories: Category[],
+): Category[] {
+	const present = new Set<string>();
 	for (const section of sections) {
-		const lines = section.entries
-			.filter((entry) => !entry.item.checked)
-			.map((entry) =>
-				entry.item.quantity > 1
-					? `• ${entry.product.name} x${entry.item.quantity}`
-					: `• ${entry.product.name}`,
-			);
-		if (lines.length === 0) continue;
-		const header = `*${section.supermarket?.name ?? "Sin asignar"}*`;
-		blocks.push(`${header}\n\n${lines.join("\n")}`);
+		for (const entry of section.entries) {
+			if (entry.product.category_id) present.add(entry.product.category_id);
+		}
 	}
-	return blocks.join("\n\n");
+	return categories
+		.filter((c) => c.deleted_at === null && present.has(c.id))
+		.sort((a, b) => a.position - b.position);
+}
+
+/**
+ * Estrecha una lista de mercado agrupada a una sola categoría (RF-014). El filtro solo quita filas,
+ * nunca reordena: cada sección conserva su orden por categoría (D-031) y "Sin asignar" sigue al
+ * final. `null` devuelve las secciones tal cual. Una categoría sin items en la lista (p. ej. el
+ * filtro quedó fijado y su último item se finalizó) devuelve `[]`, y la pantalla lo distingue del
+ * vacío real. Los productos sin categoría solo se ven sin filtro.
+ */
+export function filterMarketSectionsByCategory(
+	sections: MarketSection[],
+	categoryId: string | null,
+): MarketSection[] {
+	if (categoryId === null) return sections;
+	const filtered: MarketSection[] = [];
+	for (const section of sections) {
+		const entries = section.entries.filter(
+			(entry) => entry.product.category_id === categoryId,
+		);
+		if (entries.length > 0) filtered.push({ ...section, entries });
+	}
+	return filtered;
 }
 
 export interface CatalogSection {

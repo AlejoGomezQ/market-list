@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet } from "@tanstack/react-router";
-import { Pencil, Plus, Settings } from "lucide-react";
+import { Pencil, Plus, Search, Settings, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
 	ProductDrawer,
 	type ProductDrawerState,
 } from "@/components/catalog/product-drawer";
+import { CategoryFilterChips } from "@/components/category-filter-chips";
 import { QuantityControl } from "@/components/quantity-control";
 import { Input } from "@/components/ui/input";
 import { getHouseholdLink } from "@/lib/household-link";
@@ -54,6 +55,7 @@ export function CatalogoScreen() {
 		enabled: Boolean(householdId),
 	});
 
+	const [searchOpen, setSearchOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [categoryId, setCategoryId] = useState<string | null>(null);
 	const [drawer, setDrawer] = useState<ProductDrawerState | null>(null);
@@ -71,20 +73,17 @@ export function CatalogoScreen() {
 				.sort((a, b) => a.position - b.position),
 		[categories],
 	);
-	// Filtro por categoría en memoria, antes de la búsqueda por texto: se combinan (categoría Y
-	// texto). Sin categoría (`category_id === null`) queda fuera al elegir una concreta; visible
-	// con "Todas". Ninguna consulta nueva (CLAUDE.md).
-	const byCategory = useMemo(
-		() =>
-			categoryId === null
-				? liveProducts
-				: liveProducts.filter((p) => p.category_id === categoryId),
-		[liveProducts, categoryId],
-	);
-	const filtered = useMemo(
-		() => searchProducts(byCategory, search),
-		[byCategory, search],
-	);
+	// Búsqueda por texto y filtro por categoría no se combinan: si hay texto, reemplaza al filtro
+	// de categoría (busca en todo el catálogo vivo); si el texto está vacío, se aplica la
+	// categoría elegida. Sin categoría (`category_id === null`) es "Todas". No se limpia
+	// `categoryId` al buscar -- al borrar el texto, el filtro de categoría vuelve a aplicarse solo.
+	// Ninguna consulta nueva (CLAUDE.md).
+	const filtered = useMemo(() => {
+		if (search.trim()) return searchProducts(liveProducts, search);
+		return categoryId === null
+			? liveProducts
+			: liveProducts.filter((p) => p.category_id === categoryId);
+	}, [liveProducts, search, categoryId]);
 	const sections = useMemo(
 		() => groupProductsBySupermarket(filtered, supermarkets),
 		[filtered, supermarkets],
@@ -134,68 +133,60 @@ export function CatalogoScreen() {
 		<section className="flex h-full flex-col">
 			<header className="flex items-center justify-between px-4 py-6">
 				<h1 className="text-26 font-bold wdth-75">Catálogo</h1>
-				<Link
-					to="/catalogo/ajustes"
-					aria-label="Ajustes"
-					className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
-				>
-					<Settings aria-hidden="true" className="size-5" strokeWidth={1.75} />
-				</Link>
-			</header>
-
-			<div className="px-4 pb-3">
-				<Input
-					value={search}
-					onChange={(event) => setSearch(event.target.value)}
-					placeholder="Buscar producto…"
-					aria-label="Buscar producto"
-				/>
-			</div>
-
-			{/* Fila de chips de categoría (§5): scroll horizontal sin barra visible, acromática --
-			el chip activo se distingue por tinta y fondo neutro, nunca por color de supermercado
-			(D-036). Cada chip supera los 44px de toque. Mismo patrón que los chips del drawer. */}
-			{liveCategories.length > 0 && (
-				<div
-					role="toolbar"
-					aria-label="Filtrar por categoría"
-					aria-orientation="horizontal"
-					className="flex gap-2 overflow-x-auto px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-				>
+				<div className="flex items-center">
+					<Link
+						to="/catalogo/ajustes"
+						aria-label="Ajustes"
+						className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
+					>
+						<Settings
+							aria-hidden="true"
+							className="size-5"
+							strokeWidth={1.75}
+						/>
+					</Link>
 					<button
 						type="button"
-						aria-pressed={categoryId === null}
-						onClick={() => setCategoryId(null)}
-						className={cn(
-							"min-h-[var(--min-height-tap)] shrink-0 rounded-[var(--radius-control)] border px-[18px] text-14",
-							categoryId === null
-								? "border-foreground bg-foreground text-background"
-								: "border-border text-foreground",
-						)}
+						aria-label={searchOpen ? "Cerrar búsqueda" : "Buscar producto"}
+						onClick={() => {
+							setSearchOpen((open) => !open);
+							setSearch("");
+						}}
+						className="flex size-[var(--size-tap)] items-center justify-center text-foreground"
 					>
-						Todas
+						{searchOpen ? (
+							<X aria-hidden="true" className="size-5" strokeWidth={1.75} />
+						) : (
+							<Search
+								aria-hidden="true"
+								className="size-5"
+								strokeWidth={1.75}
+							/>
+						)}
 					</button>
-					{liveCategories.map((category) => (
-						<button
-							key={category.id}
-							type="button"
-							aria-pressed={categoryId === category.id}
-							onClick={() =>
-								setCategoryId((current) =>
-									current === category.id ? null : category.id,
-								)
-							}
-							className={cn(
-								"min-h-[var(--min-height-tap)] shrink-0 rounded-[var(--radius-control)] border px-[18px] text-14",
-								categoryId === category.id
-									? "border-foreground bg-foreground text-background"
-									: "border-border text-foreground",
-							)}
-						>
-							{category.name}
-						</button>
-					))}
 				</div>
+			</header>
+
+			{searchOpen && (
+				<div className="px-4 pb-3">
+					<Input
+						autoFocus
+						value={search}
+						onChange={(event) => setSearch(event.target.value)}
+						placeholder="Buscar producto…"
+						aria-label="Buscar producto"
+					/>
+				</div>
+			)}
+
+			{/* Chips de categoría (§5): todo el catálogo vivo por `position`. Mismo componente,
+			aspecto y comportamiento que en el Mercado. */}
+			{liveCategories.length > 0 && (
+				<CategoryFilterChips
+					categories={liveCategories}
+					value={categoryId}
+					onChange={setCategoryId}
+				/>
 			)}
 
 			<div className="min-h-0 flex-1 overflow-y-auto pb-24">
@@ -313,7 +304,7 @@ export function CatalogoScreen() {
 				type="button"
 				aria-label="Nuevo producto"
 				onClick={() => setDrawer({ mode: "create" })}
-				className="fixed bottom-[calc(var(--min-height-tap)+env(safe-area-inset-bottom,0px)+16px)] right-4 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground"
+				className="fixed bottom-[calc(var(--min-height-tap)+env(safe-area-inset-bottom,0px)+16px)] right-4 z-20 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground"
 			>
 				<Plus aria-hidden="true" className="size-[26px]" strokeWidth={1.75} />
 			</button>

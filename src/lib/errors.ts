@@ -72,12 +72,11 @@ function isNetworkError(error: unknown): boolean {
 }
 
 /**
- * Un `raise exception` propio de una función SQL de onboarding (`join_household`, `create_household`,
- * `regenerate_household_code`) llega desde PostgREST como `{ message, code, details, hint }` -- en
- * supabase-js reciente `PostgrestError extends Error`, así que basta comprobar la forma. El SQLSTATE
- * por defecto de `raise exception` es `P0001`.
+ * Un error de PostgREST/supabase-js llega como `{ message, code, details, hint }` -- en supabase-js
+ * reciente `PostgrestError extends Error`, así que basta comprobar la forma. `code` es el SQLSTATE de
+ * Postgres (`23505`, `42501`, …) o un código propio de PostgREST (`PGRST301`, `PGRST116`, …).
  */
-export function isPostgresRaise(
+function isPostgrestError(
 	error: unknown,
 ): error is { message: string; code: string } {
 	return (
@@ -85,9 +84,20 @@ export function isPostgresRaise(
 		error !== null &&
 		"code" in error &&
 		"message" in error &&
-		(error as { code: unknown }).code === "P0001" &&
+		typeof (error as { code: unknown }).code === "string" &&
 		typeof (error as { message: unknown }).message === "string"
 	);
+}
+
+/**
+ * Un `raise exception` propio de una función SQL de onboarding (`join_household`, `create_household`,
+ * `regenerate_household_code`, `leave_household`) o de `sync_push`. El SQLSTATE por defecto de
+ * `raise exception` es `P0001`.
+ */
+export function isPostgresRaise(
+	error: unknown,
+): error is { message: string; code: string } {
+	return isPostgrestError(error) && error.code === "P0001";
 }
 
 /**
@@ -118,12 +128,37 @@ export function toUserMessage(error: unknown): string {
 		return "Sin conexión. Se guardó en el dispositivo y se sube cuando vuelva la red.";
 	}
 	if (isPostgresRaise(error)) {
+		// `raise exception` propios, distinguidos por su texto (el texto crudo lleva el nombre de la
+		// función SQL y va a Sentry, nunca a pantalla). El orden no importa: los patrones no solapan.
 		if (/demasiados intentos/i.test(error.message)) {
 			return "Demasiados intentos. Espera un momento antes de volver a probar.";
 		}
-		// Otro `raise exception` propio: un poco más útil que el genérico, sin soltar el texto crudo
-		// (lleva el nombre de la función SQL y no ayuda a nadie).
+		if (/no pertenece a ning[uú]n hogar/i.test(error.message)) {
+			return "Este dispositivo ya no está en ningún hogar. Vuelve a entrar con el código.";
+		}
+		if (/se requiere sesi[oó]n autenticada/i.test(error.message)) {
+			return "Tu sesión no está lista. Cierra y vuelve a abrir la app.";
+		}
+		// Otro `raise exception` propio: un poco más útil que el genérico, sin soltar el texto crudo.
 		return "No se pudo completar la operación. Revisa los datos e inténtalo de nuevo.";
+	}
+	if (isPostgrestError(error)) {
+		// Códigos estándar de PostgREST/Postgres que pueden llegar a pantalla desde una llamada RPC
+		// directa (onboarding, ajustes). El detalle (SQL, nombre de restricción) va a Sentry.
+		switch (error.code) {
+			// JWT caducado o inválido: PostgREST lo rechaza antes de entrar en la función.
+			case "PGRST301":
+				return "Tu sesión caducó. Cierra y vuelve a abrir la app.";
+			// Permiso denegado / política RLS.
+			case "42501":
+				return "No tienes permiso para hacer ese cambio.";
+			// Violación de unicidad.
+			case "23505":
+				return "Eso ya existe.";
+			// Se esperaba una fila y no había ninguna.
+			case "PGRST116":
+				return "No se encontró lo que buscabas. Puede que ya no exista.";
+		}
 	}
 	return GENERIC_MESSAGE;
 }

@@ -6,12 +6,17 @@ import type {
 	Supermarket,
 } from "@/schemas/domain";
 import {
+	categoriesInMarketList,
+	filterMarketSectionsByCategory,
 	findSimilarProduct,
 	formatMarketListForSharing,
+	formatMarketSectionForSharing,
+	formatQuantityLabel,
 	groupMarketListBySupermarket,
 	groupProductsBySupermarket,
 	groupPurchaseHistory,
 	indexActiveListItemsByProduct,
+	isProduceCategory,
 	nextPosition,
 	searchProducts,
 	splitByChecked,
@@ -304,6 +309,82 @@ describe("groupMarketListBySupermarket", () => {
 	});
 });
 
+describe("categoriesInMarketList / filterMarketSectionsByCategory", () => {
+	const lacteos = category({ id: "cat-lacteos", name: "Lácteos", position: 0 });
+	const limpieza = category({
+		id: "cat-limpieza",
+		name: "Limpieza",
+		position: 1,
+	});
+	const bebidas = category({ id: "cat-bebidas", name: "Bebidas", position: 2 });
+
+	const leche = product({ id: "p-leche", category_id: "cat-lacteos" });
+	const jabon = product({ id: "p-jabon", category_id: "cat-limpieza" });
+	const sal = product({ id: "p-sal", category_id: null });
+
+	const sections = [
+		{
+			supermarket: supermarket({ id: "sm-1" }),
+			entries: [
+				{
+					item: listItem({ id: "li-leche", product_id: "p-leche" }),
+					product: leche,
+					category: lacteos,
+				},
+				{
+					item: listItem({ id: "li-jabon", product_id: "p-jabon" }),
+					product: jabon,
+					category: limpieza,
+				},
+			],
+		},
+		{
+			supermarket: null,
+			entries: [
+				{
+					item: listItem({ id: "li-sal", product_id: "p-sal" }),
+					product: sal,
+					category: null,
+				},
+			],
+		},
+	];
+
+	it("lists only categories present among the list items, ordered by position", () => {
+		const result = categoriesInMarketList(sections, [
+			bebidas,
+			limpieza,
+			lacteos,
+		]);
+		expect(result.map((c) => c.name)).toEqual(["Lácteos", "Limpieza"]);
+	});
+
+	it("excludes deleted categories even if a product still points at one", () => {
+		const deleted = category({ id: "cat-lacteos", deleted_at: ts });
+		expect(categoriesInMarketList(sections, [deleted, limpieza])).toEqual([
+			limpieza,
+		]);
+	});
+
+	it("returns the sections untouched when categoryId is null", () => {
+		expect(filterMarketSectionsByCategory(sections, null)).toBe(sections);
+	});
+
+	it("narrows every section to one category and drops the ones left empty", () => {
+		const filtered = filterMarketSectionsByCategory(sections, "cat-lacteos");
+		expect(filtered).toHaveLength(1);
+		expect(filtered[0].entries.map((e) => e.product.id)).toEqual(["p-leche"]);
+	});
+
+	it("returns [] when the category has no items in the list (stuck filter)", () => {
+		expect(filterMarketSectionsByCategory(sections, "cat-bebidas")).toEqual([]);
+	});
+
+	it("never matches uncategorized products", () => {
+		expect(filterMarketSectionsByCategory(sections, "cat-sin")).toEqual([]);
+	});
+});
+
 describe("groupProductsBySupermarket", () => {
 	it("groups the whole live catalog alphabetically within each supermarket (experiencia_usuario §5)", () => {
 		const supermarkets = [supermarket({ id: "sm-1", position: 0 })];
@@ -478,13 +559,16 @@ describe("groupPurchaseHistory", () => {
 });
 
 describe("formatMarketListForSharing", () => {
-	const entry = (over: Partial<Product & ListItem>) => ({
+	const entry = (
+		over: Partial<Product & ListItem> & { category?: Category | null },
+	) => ({
 		item: listItem({
 			product_id: over.id ?? "prod-1",
 			quantity: over.quantity ?? 1,
 			checked: over.checked ?? false,
 		}),
 		product: product({ id: over.id ?? "prod-1", name: over.name ?? "Leche" }),
+		category: over.category ?? null,
 	});
 	const section = (
 		name: string | null,
@@ -499,21 +583,21 @@ describe("formatMarketListForSharing", () => {
 			section("Supermu", [entry({ id: "p1", name: "Leche" })]),
 			section("D1", [entry({ id: "p2", name: "Arroz" })]),
 		]);
-		expect(text).toBe("*Supermu*\n\n• Leche\n\n*D1*\n\n• Arroz");
+		expect(text).toBe("*Supermu*\n\n• Leche x1\n\n*D1*\n\n• Arroz x1");
 	});
 
 	it("uses each block's header in WhatsApp bold followed by a blank line", () => {
 		const text = formatMarketListForSharing([
 			section("Supermu", [entry({ name: "Leche" })]),
 		]);
-		expect(text).toBe("*Supermu*\n\n• Leche");
+		expect(text).toBe("*Supermu*\n\n• Leche x1");
 	});
 
 	it('labels the null supermarket "Sin asignar"', () => {
 		const text = formatMarketListForSharing([
 			section(null, [entry({ name: "Sal" })]),
 		]);
-		expect(text).toBe("*Sin asignar*\n\n• Sal");
+		expect(text).toBe("*Sin asignar*\n\n• Sal x1");
 	});
 
 	it("omits sections with no pending items", () => {
@@ -521,7 +605,7 @@ describe("formatMarketListForSharing", () => {
 			section("Supermu", [entry({ id: "p1", name: "Leche" })]),
 			section("D1", [entry({ id: "p2", name: "Arroz", checked: true })]),
 		]);
-		expect(text).toBe("*Supermu*\n\n• Leche");
+		expect(text).toBe("*Supermu*\n\n• Leche x1");
 	});
 
 	it("lists only pending products, excluding the checked ones", () => {
@@ -531,17 +615,17 @@ describe("formatMarketListForSharing", () => {
 				entry({ id: "p2", name: "Pan", checked: true }),
 			]),
 		]);
-		expect(text).toBe("*Supermu*\n\n• Leche");
+		expect(text).toBe("*Supermu*\n\n• Leche x1");
 	});
 
-	it("appends ' x{n}' only when quantity is greater than 1", () => {
+	it("appends 'x{n}' always, including quantity 1", () => {
 		const text = formatMarketListForSharing([
 			section("Supermu", [
 				entry({ id: "p1", name: "Leche", quantity: 1 }),
 				entry({ id: "p2", name: "Huevos", quantity: 12 }),
 			]),
 		]);
-		expect(text).toBe("*Supermu*\n\n• Leche\n• Huevos x12");
+		expect(text).toBe("*Supermu*\n\n• Leche x1\n• Huevos x12");
 	});
 
 	it("returns an empty string when nothing is pending in the whole list", () => {
@@ -560,6 +644,85 @@ describe("formatMarketListForSharing", () => {
 			]),
 		]);
 		expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
+	});
+
+	it("uses ' lb' for produce categories in the shared quantity, not the plain number", () => {
+		const frutas = category({ id: "cat-frutas", name: "Frutas y Verduras" });
+		const text = formatMarketListForSharing([
+			section("Supermu", [
+				entry({ id: "p1", name: "Manzana", quantity: 3, category: frutas }),
+			]),
+		]);
+		expect(text).toBe("*Supermu*\n\n• Manzana x3 lb");
+	});
+});
+
+describe("formatMarketSectionForSharing", () => {
+	it("shares a single section's pending items with the same format as the full list", () => {
+		const text = formatMarketSectionForSharing({
+			supermarket: supermarket({ name: "Supermu" }),
+			entries: [
+				{
+					item: listItem({ product_id: "p1", quantity: 2 }),
+					product: product({ id: "p1", name: "Leche" }),
+					category: null,
+				},
+			],
+		});
+		expect(text).toBe("*Supermu*\n\n• Leche x2");
+	});
+
+	it("returns an empty string when the section has nothing pending", () => {
+		const text = formatMarketSectionForSharing({
+			supermarket: supermarket({ name: "Supermu" }),
+			entries: [
+				{
+					item: listItem({ product_id: "p1", checked: true }),
+					product: product({ id: "p1", name: "Leche" }),
+					category: null,
+				},
+			],
+		});
+		expect(text).toBe("");
+	});
+});
+
+describe("isProduceCategory", () => {
+	it("is true for a Frutas or Verduras category", () => {
+		expect(isProduceCategory(category({ name: "Frutas" }))).toBe(true);
+		expect(isProduceCategory(category({ name: "Verduras" }))).toBe(true);
+	});
+
+	it("is true for case and accent variants, including a combined name", () => {
+		expect(isProduceCategory(category({ name: "FRUTAS" }))).toBe(true);
+		expect(isProduceCategory(category({ name: "frutas y verduras" }))).toBe(
+			true,
+		);
+	});
+
+	it("is false for another category", () => {
+		expect(isProduceCategory(category({ name: "Lácteos" }))).toBe(false);
+	});
+
+	it("is false for null or undefined", () => {
+		expect(isProduceCategory(null)).toBe(false);
+		expect(isProduceCategory(undefined)).toBe(false);
+	});
+});
+
+describe("formatQuantityLabel", () => {
+	it("appends ' lb' for produce categories", () => {
+		expect(formatQuantityLabel(2, category({ name: "Frutas" }))).toBe("2 lb");
+	});
+
+	it("has no suffix for any other category, including null", () => {
+		expect(formatQuantityLabel(2, category({ name: "Lácteos" }))).toBe("2");
+		expect(formatQuantityLabel(2, null)).toBe("2");
+	});
+
+	it("always prints the number, including quantity 1", () => {
+		expect(formatQuantityLabel(1, null)).toBe("1");
+		expect(formatQuantityLabel(1, category({ name: "Frutas" }))).toBe("1 lb");
 	});
 });
 

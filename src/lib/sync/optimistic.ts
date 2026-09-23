@@ -47,7 +47,15 @@ export function useMarkListItemChecked(
 			entity: "list_items",
 			id: item.id,
 			ts,
-			fields: { checked, checked_at: checked ? ts : null },
+			fields: {
+				// household_id/product_id: hace el parche autosuficiente para dar de alta la fila si
+				// el patch de `buildAddToList` original quedó en cuarentena (mismo motivo que en
+				// mutations/list-items.ts).
+				household_id: item.household_id,
+				product_id: item.product_id,
+				checked,
+				checked_at: checked ? ts : null,
+			},
 		};
 
 		queryClient.setQueryData<ListItem[]>(
