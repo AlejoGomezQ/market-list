@@ -1,7 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Outlet } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { BottomNav } from "@/components/bottom-nav";
+import { reportError } from "@/lib/errors";
 import { getHouseholdLink } from "@/lib/household-link";
+import { reconcilePushSubscription } from "@/lib/push-subscription";
 import { supabaseConfigError } from "@/lib/supabase";
 import { useSyncEngine } from "@/lib/sync/engine";
 
@@ -25,6 +28,16 @@ export function AppShell() {
 	const householdId = getHouseholdLink()?.householdId;
 	const queryClient = useQueryClient();
 	useSyncEngine(householdId, queryClient);
+
+	// Revalidación al arrancar (plan_notificaciones_push_v0.1 §9 P1): si ya había una suscripción
+	// activa, la vuelve a subir -- cubre un `endpoint` que cambió desde la última vez. Sin permiso
+	// concedido no hace nada (lib/push-subscription.ts). Una vez por montaje de AppShell, igual que
+	// useSyncEngine arriba.
+	useEffect(() => {
+		void reconcilePushSubscription().catch((error) => {
+			reportError(error, { op: "reconcilePushSubscription" });
+		});
+	}, []);
 
 	return (
 		// Altura fija al viewport (`h-dvh`, no `min-h-dvh`) y `overflow-hidden`: la página en sí

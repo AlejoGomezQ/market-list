@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { CategoriesSection } from "@/components/settings/categories-section";
+import { NotificationsSection } from "@/components/settings/notifications-section";
 import { SupermarketsSection } from "@/components/settings/supermarkets-section";
 import { Button } from "@/components/ui/button";
 import {
@@ -149,6 +150,10 @@ export function AjustesDrawer() {
 								</div>
 							</>
 						)}
+
+						<div className="border-t border-border pt-4">
+							<NotificationsSection />
+						</div>
 
 						<div className="border-t border-border pt-4">
 							<Button
