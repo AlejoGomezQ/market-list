@@ -74,3 +74,16 @@ export async function addToQuarantine(entry: QuarantinedPatch): Promise<void> {
 		});
 	}
 }
+
+/**
+ * Quita una entrada de la cuarentena por acción explícita del usuario (reintentar o descartar
+ * desde la franja de §9) -- nunca de forma automática o silenciosa, que es justo lo que la regla
+ * "nunca se borra solo" prohíbe. Reintentar sigue encolando el parche por su cuenta (la mutación
+ * única de siempre); si vuelve a fallar de forma permanente, `quarantineSinglePatch` lo repone él
+ * solo, sin lógica nueva aquí.
+ */
+export async function removeFromQuarantine(patchId: string): Promise<void> {
+	snapshot = snapshot.filter((existing) => existing.patch.id !== patchId);
+	notify();
+	await idbSet(QUARANTINE_KEY, snapshot, queueStore);
+}

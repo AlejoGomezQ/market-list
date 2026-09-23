@@ -92,7 +92,12 @@ describe("buildDeleteProduct", () => {
 				entity: "list_items",
 				id: "li-1",
 				ts,
-				fields: { removed_at: ts, removed_reason: "removed" },
+				fields: {
+					household_id: hh,
+					product_id: "p-1",
+					removed_at: ts,
+					removed_reason: "removed",
+				},
 			},
 		]);
 	});

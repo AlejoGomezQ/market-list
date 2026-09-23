@@ -54,22 +54,43 @@ export function buildAddToList(
 	return { row, patch };
 }
 
-/** RF-011/D-010: cambiar la cantidad es un parche de un solo campo. */
+/**
+ * RF-011/D-010: cambiar la cantidad. Lleva `household_id`/`product_id` además de `quantity`
+ * (igual que `buildAddToList`): si el alta original quedó en cuarentena, este parche de edición
+ * es autosuficiente para dar de alta la fila en vez de reventar contra `sync_apply_list_item_patch`
+ * por falta de `product_id` (bug de cuarentena en cascada). Server-side es un no-op seguro cuando
+ * la fila ya existe -- ver verificación en el informe de este cambio.
+ */
 export function buildSetQuantity(
 	item: ListItem,
 	quantity: number,
 	ts: string,
 ): SyncPatch {
-	return { entity: "list_items", id: item.id, ts, fields: { quantity } };
+	return {
+		entity: "list_items",
+		id: item.id,
+		ts,
+		fields: {
+			household_id: item.household_id,
+			product_id: item.product_id,
+			quantity,
+		},
+	};
 }
 
-/** RF-010: quitar de la lista. El producto sigue en el catálogo (RN-003). */
+/** RF-010: quitar de la lista. El producto sigue en el catálogo (RN-003). Mismo motivo que
+ * `buildSetQuantity` para llevar `household_id`/`product_id`. */
 export function buildRemoveFromList(item: ListItem, ts: string): SyncPatch {
 	return {
 		entity: "list_items",
 		id: item.id,
 		ts,
-		fields: { removed_at: ts, removed_reason: "removed" },
+		fields: {
+			household_id: item.household_id,
+			product_id: item.product_id,
+			removed_at: ts,
+			removed_reason: "removed",
+		},
 	};
 }
 
@@ -81,16 +102,20 @@ export function buildRemoveFromList(item: ListItem, ts: string): SyncPatch {
  * que no entra en el lote aunque el usuario confirme más tarde.
  */
 export function buildFinalizePurchase(
-	itemIds: string[],
+	items: ListItem[],
 	ts: string,
 	batchId: string,
 	total?: number | null,
 ): SyncPatch[] {
-	return itemIds.map((id) => ({
+	return items.map((item) => ({
 		entity: "list_items" as const,
-		id,
+		id: item.id,
 		ts,
 		fields: {
+			// household_id/product_id: igual que `buildSetQuantity`, hace el parche autosuficiente
+			// si el alta original sigue en cuarentena.
+			household_id: item.household_id,
+			product_id: item.product_id,
 			removed_at: ts,
 			removed_reason: "purchased" as const,
 			purchase_batch_id: batchId,
@@ -106,13 +131,19 @@ export function buildFinalizePurchase(
  * lo trata como lápida absorbente en `list_items` (arquitectura §4.1, C-006), así que un timestamp
  * posterior al de la finalización basta para resucitar el item vía el mismo LWW de siempre.
  */
-export function buildUndoFinalize(itemIds: string[], ts: string): SyncPatch[] {
-	return itemIds.map((id) => ({
+export function buildUndoFinalize(items: ListItem[], ts: string): SyncPatch[] {
+	return items.map((item) => ({
 		entity: "list_items" as const,
-		id,
+		id: item.id,
 		ts,
 		// Un item resucitado no debe aparecer en el historial ni arrastrar un total.
-		fields: { removed_at: null, purchase_batch_id: null, purchase_total: null },
+		fields: {
+			household_id: item.household_id,
+			product_id: item.product_id,
+			removed_at: null,
+			purchase_batch_id: null,
+			purchase_total: null,
+		},
 	}));
 }
 
@@ -123,15 +154,19 @@ export function buildUndoFinalize(itemIds: string[], ts: string): SyncPatch[] {
  * columna tiene `check (>= 0)` en la BD -- la UI solo deja teclear dígitos.
  */
 export function buildSetPurchaseTotal(
-	itemIds: string[],
+	items: ListItem[],
 	ts: string,
 	total: number | null,
 ): SyncPatch[] {
-	return itemIds.map((id) => ({
+	return items.map((item) => ({
 		entity: "list_items" as const,
-		id,
+		id: item.id,
 		ts,
-		fields: { purchase_total: total },
+		fields: {
+			household_id: item.household_id,
+			product_id: item.product_id,
+			purchase_total: total,
+		},
 	}));
 }
 
@@ -156,6 +191,25 @@ export function useListItemMutations(
 						: row;
 				}),
 		);
+	}
+
+	/**
+	 * Finalizar/deshacer/editar total llegan desde la UI como `itemIds: string[]` (capturados en el
+	 * instante del gesto, C-002) sin la fila completa a mano. Se resuelven contra la caché ya
+	 * hidratada -- sin red -- para que los builders puedan mandar `household_id`/`product_id` y así
+	 * ser autosuficientes si el alta original quedó en cuarentena. Un id que ya no está en caché se
+	 * descarta en vez de reventar: no puede pasar en uso normal porque `itemIds` sale de esta misma
+	 * consulta.
+	 */
+	function resolveItems(itemIds: string[]): ListItem[] {
+		const rows =
+			queryClient.getQueryData<ListItem[]>(
+				householdTableKey("list_items", householdId),
+			) ?? [];
+		const byId = new Map(rows.map((row) => [row.id, row]));
+		return itemIds
+			.map((id) => byId.get(id))
+			.filter((row): row is ListItem => row != null);
 	}
 
 	function addToList(product: Product): ListItem {
@@ -222,7 +276,12 @@ export function useListItemMutations(
 		const ts = new Date().toISOString();
 		// D-024: el id del lote se genera en el cliente, una vez por finalización.
 		const batchId = crypto.randomUUID();
-		const patches = buildFinalizePurchase(itemIds, ts, batchId, total);
+		const patches = buildFinalizePurchase(
+			resolveItems(itemIds),
+			ts,
+			batchId,
+			total,
+		);
 		patchListItems(patches);
 		sync.mutate(patches);
 	}
@@ -231,7 +290,7 @@ export function useListItemMutations(
 	function setPurchaseTotal(itemIds: string[], total: number | null): void {
 		if (itemIds.length === 0) return;
 		const ts = new Date().toISOString();
-		const patches = buildSetPurchaseTotal(itemIds, ts, total);
+		const patches = buildSetPurchaseTotal(resolveItems(itemIds), ts, total);
 		patchListItems(patches);
 		sync.mutate(patches);
 	}
@@ -239,7 +298,7 @@ export function useListItemMutations(
 	function undoFinalize(itemIds: string[]): void {
 		if (itemIds.length === 0) return;
 		const ts = new Date().toISOString();
-		const patches = buildUndoFinalize(itemIds, ts);
+		const patches = buildUndoFinalize(resolveItems(itemIds), ts);
 		patchListItems(patches);
 		sync.mutate(patches);
 	}
